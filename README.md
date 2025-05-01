@@ -3,9 +3,9 @@
 Personal project that aggregates Czech property sites and reports on new/modified listings of properties and propagates these changes to a discord channel.
 
 ## Usage
-Clone the project   
+Clone the repo     
 Install dependencies with npm i     
-Run scraper.js in /src  
+Execute npm run start   
 
 ## To-Do
 
