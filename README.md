@@ -5,6 +5,8 @@ Personal project that aggregates Czech property sites and reports on new/modifie
 ## Usage
 Clone the repo     
 Install dependencies with npm i     
+Populate .env with DISCORD_TOKEN and CHANNEL_ID variables   
+Ensure you have a separate channel in your discord that the bot has access to and that there is a Webhook assigned to that channel     
 Execute npm run start   
 
 ## To-Do
