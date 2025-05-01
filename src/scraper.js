@@ -6,11 +6,11 @@ const cron = require("cron");
 const urlMetadata = require('url-metadata');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
-const { Client, ActivityType, EmbedBuilder, GatewayIntentBits } = require('discord.js');
-const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessageReactions] });
 
 const fs = require('fs');
-const FILE_PATH = '../data/listings.json';
+const FILE_PATH = './data/listings.json';
+
+const discord = require('./discord.js');
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -29,8 +29,6 @@ const IDNES_KLADNO_FLATS_URL = 'https://reality.idnes.cz/s/prodej/byty/kladno/?s
 const IDNES_STREDOCESKY_HOUSES_URL = 'https://reality.idnes.cz/s/prodej/domy/cena-do-10500000/?s-l=VUSC-19%3BVUSC-27&s-qc%5BsubtypeHouse%5D%5B0%5D=house&s-qc%5BsubtypeHouse%5D%5B1%5D=turn-key&s-qc%5BsubtypeHouse%5D%5B2%5D=other&s-qc%5BusableAreaMin%5D=70&s-qc%5Bownership%5D%5B0%5D=personal'
 const IDNES_STREDOCESKY_FLATS_URL = 'https://reality.idnes.cz/s/prodej/byty/cena-do-10500000/?s-l=VUSC-19%3BVUSC-27&s-qc%5BsubtypeFlat%5D%5B0%5D=4k&s-qc%5BsubtypeFlat%5D%5B1%5D=41&s-qc%5BsubtypeFlat%5D%5B2%5D=5k&s-qc%5BsubtypeFlat%5D%5B3%5D=51&s-qc%5BsubtypeFlat%5D%5B4%5D=6k&s-qc%5BsubtypeFlat%5D%5B5%5D=atypical&s-qc%5BusableAreaMin%5D=70&s-qc%5Bownership%5D%5B0%5D=personal'
 
-let SECRET_CHANNEL_ID;
-
 const originalConsoleError = console.error;
 console.error = (message, ...optionalParams) => {
     if (typeof message === 'string' && message.includes('Could not parse CSS stylesheet')) {
@@ -40,16 +38,21 @@ console.error = (message, ...optionalParams) => {
 };
 
 (async () => {
-    await botInit(process.env.DISCORD_TOKEN, process.env.CHANNEL_ID);
+    await discord.botInit(process.env.DISCORD_TOKEN, process.env.CHANNEL_ID);
     await main();
 })();
 
 async function bezRealitky() {
     console.log('bezRealitky init');
 
+    const jsonArr = [BEZREALITKY_HOUSES_JSON, BEZREALITKY_FLATS_JSON, BEZREALITKY_LANDS_JSON];
+
+    let listings;
+    let resultsArr = [];
+
     const url = 'https://api.bezrealitky.cz/graphql/';
 
-    let options = {
+    const options = {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -57,34 +60,15 @@ async function bezRealitky() {
         body: JSON.stringify(BEZREALITKY_HOUSES_JSON)
     }
 
-    let resultsArr = [];
-    let houses = await fetch(url, options);
-    houses = await houses.json();
-    if (houses.data?.markers) resultsArr = [...resultsArr, ...houses.data.markers];
-
-    options = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(BEZREALITKY_FLATS_JSON)
+    for (let i = 0; i < jsonArr.length; i++) {
+        let data = await fetch(url, options);
+        listings = await data.json();
+        if (listings.data?.markers) resultsArr = [...resultsArr, ...listings.data.markers];
     }
 
     let flats = await fetch(url, options);
     flats = await flats.json();
     if (flats.data?.markers) resultsArr = [...resultsArr, ...flats.data.markers];
-
-    options = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(BEZREALITKY_LANDS_JSON)
-    }
-
-    let lands = await fetch(url, options);
-    lands = await lands.json();
-    if (lands.data?.markers) resultsArr = [...resultsArr, ...lands.data.markers];
 
     const finalArr = resultsArr.map((listing, i) => ({
         id: listing.id,
@@ -242,22 +226,6 @@ async function closeBrowserWithTimeout(browser, pid) {
     }
 }
 
-const STATUS_DEFAULT = 'Sniffing for properties 🐕';
-
-async function botInit(token, channelID) {
-    const DISCORD_TOKEN = token;
-    SECRET_CHANNEL_ID = channelID;
-
-    bot.login(DISCORD_TOKEN).catch(error => {
-        throw error;
-    });
-
-    bot.once('ready', () => {
-        console.log("BOT IS READY!");
-        bot.user.setActivity(STATUS_DEFAULT, { type: ActivityType.Custom });
-    });
-}
-
 async function launchBrowser() {
 
     const browserServer = await chromium.launchServer({ headless: true });
@@ -285,64 +253,11 @@ async function fileData() {
     } catch (err) {
         if (err.code === 'ENOENT') {
             console.log('Creating new file...');
-            fs.createWriteStream('listings.json');
+            fs.createWriteStream(FILE_PATH);
             return [];
         } else {
             console.error('Error reading file:', err.message);
         }
-    }
-}
-
-async function constructEmbed(listing) {
-
-    const metadata = listing.metadata;
-    const url = metadata.url;
-
-    let siteColor = "#ffffff";
-    let site;
-
-    if (url.includes('sreality')) {
-        siteColor = '#990000';
-        site = 'SREALITY 🔴';
-    }
-
-    if (url.includes('bezrealitky')) {
-        siteColor = '#1f9970';
-        site = 'BEZREALITKY 🟢';
-    }
-
-    if (url.includes('idnes')) {
-        siteColor = '#1d80d7';
-        site = 'IDNES 🔵';
-    }
-
-    return new Promise(resolve => {
-
-        const embed = new EmbedBuilder();
-
-        embed.setColor(siteColor)
-            .setAuthor({ name: site })
-            .setURL(metadata.url)
-            .setTitle(metadata['og:title'])
-            .setImage(metadata['og:image'])
-            .setDescription(metadata['og:description'])
-            .addFields({ name: 'Google Maps', value: `[HERE 📌](https://www.google.com/maps/search/?api=1&query=${listing.street},${listing.town})` })
-        resolve(embed);
-    });
-}
-
-async function sendEmbed(embed) {
-    const channel = bot.channels.cache.get(SECRET_CHANNEL_ID);
-    try {
-        const webhooks = await channel.fetchWebhooks();
-        const webhook = await webhooks.first();
-
-        await webhook.send({
-            embeds: [embed]
-        });
-
-    } catch (error) {
-        console.error('Error trying to send a message: ', error);
     }
 }
 
@@ -364,8 +279,8 @@ async function processMetadata(metadata) {
 
         // Create the result object
         obj = {
-            street: street,
-            town: town
+            street: streetPlus,
+            town: townPlus
         };
 
     }
