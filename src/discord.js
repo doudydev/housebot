@@ -1,5 +1,7 @@
 'use strict';
 
+require('dotenv').config();
+
 const { Client, ActivityType, EmbedBuilder, GatewayIntentBits } = require('discord.js');
 const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessageReactions] });
 
@@ -7,9 +9,9 @@ let SECRET_CHANNEL_ID;
 
 const STATUS_DEFAULT = 'Sniffing for properties 🐕';
 
-async function botInit(token, channelID) {
-    const DISCORD_TOKEN = token;
-    SECRET_CHANNEL_ID = channelID;
+async function botInit() {
+    const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+    SECRET_CHANNEL_ID = process.env.CHANNEL_ID;
 
     bot.login(DISCORD_TOKEN).catch(error => {
         throw error;
@@ -46,20 +48,25 @@ async function constructEmbed(listing) {
 
     //form query
     let fieldsArr = [];
-    if (!listing.street.includes('m²') && !listing.town.includes('m²')) {
-        let query; 
 
-        if (!listing.street.includes('m²')) {
-            query = listing.street + ',' + listing.town;
-        }
-        else {
-            query = listing.town;
-        }
+    let extractedPrice = metadata.description.match(/\d{1,3}(?: \d{3})* Kč/);
+    fieldsArr.push({ name: 'Cena', value: `${extractedPrice}` })
 
-        fieldsArr.push({ name: 'Google Maps', value: `[HERE 📌](https://www.google.com/maps/search/?api=1&query=${query})` })
-    
+    let query;
+
+    if (listing.street && listing.town) {
+        query = listing.street + ',' + listing.town;
+    }
+    else {
+        query = listing.town;
     }
 
+    fieldsArr.push({ name: 'Google Maps', value: `[HERE 📌](https://www.google.com/maps/search/?api=1&query=${query})`, inline: true})
+
+    if (listing.routes && listing.routes[0]) {
+        fieldsArr.push({ name: 'Cesta do PRG ✈️', value: `${listing.routes[0].distance} | ${listing.routes[0].time}`, inline: true });
+        fieldsArr.push({ name: 'Cesta do KV 🏠', value: `${listing.routes[1].distance} | ${listing.routes[1].time}`, inline: true });
+    }
 
     return new Promise(resolve => {
 
@@ -71,12 +78,12 @@ async function constructEmbed(listing) {
             .setTitle(metadata.title)
             .setImage(metadata.image)
             .setDescription(metadata.description)
-            .addFields({ name: 'Google Maps', value: `[HERE 📌](https://www.google.com/maps/search/?api=1&query=${query})` })
+            .setTimestamp();
 
-            for (const field of fieldsArr) {
-                embed.addFields({ name: field.name, value: field.value, inline: field.inline });
-            }
-    
+        for (const field of fieldsArr) {
+            embed.addFields({ name: field.name, value: field.value, inline: field.inline });
+        }
+
         resolve(embed);
     });
 }
