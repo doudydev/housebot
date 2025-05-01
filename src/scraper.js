@@ -1,11 +1,11 @@
 'use strict';
 
-require('dotenv').config();
 const { chromium } = require('patchright');
 const cron = require("cron");
 const urlMetadata = require('url-metadata');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
+const maps = require('./maps.js');
 
 const fs = require('fs');
 const FILE_PATH = './data/listings.json';
@@ -38,7 +38,7 @@ console.error = (message, ...optionalParams) => {
 };
 
 (async () => {
-    await discord.botInit(process.env.DISCORD_TOKEN, process.env.CHANNEL_ID);
+    await discord.botInit();
     await main();
 })();
 
@@ -101,7 +101,7 @@ async function sReality(page) {
             firstLaunch = false;
         }
 
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(5000);
 
         html = await page.content();
         listings = await parseHtml('sreality', html);
@@ -354,6 +354,9 @@ async function processMetadata(metadata) {
         };
     }
 
+    if (obj.street.includes('m²') || obj.street.includes('pozemek')) obj.street = undefined;
+    if (obj.town.includes('m²')) obj.street = undefined;
+
     return obj;
 }
 
@@ -372,13 +375,16 @@ async function main() {
             let idnes = await iDnes(page);
 
             const mergedListings = [...bezrealitky, ...sreality, ...idnes];
-            console.log(mergedListings.length);
-            //compare against existing dataset
+            const uniqueListings = mergedListings.filter((listing, index, array) => {
+                return array.findIndex(item => item.id === listing.id) === index;
+            });
+            
+            console.log(uniqueListings.length);
 
-            for (let i = 0; i < mergedListings.length; i++) {
-                if (!mergedListings[i].metadata) {
-                    let result = await urlMetadata(mergedListings[i].url);
-                    mergedListings[i].metadata = {
+            for (let i = 0; i < uniqueListings.length; i++) {
+                if (!uniqueListings[i].metadata) {
+                    let result = await urlMetadata(uniqueListings[i].url);
+                    uniqueListings[i].metadata = {
                         url: result['og:url'],
                         title: result['og:title'],
                         site_name: result['og:site_name'],
@@ -387,9 +393,9 @@ async function main() {
                     }
                     //processing metadata for street and town name
                     try {
-                        const processed = await processMetadata(mergedListings[i].metadata);
-                        //console.log(mergedListings[i].url.substring(0,25) + ' ' + JSON.stringify(processed))
-                        mergedListings[i] = { ...mergedListings[i], ...processed };
+                        const processed = await processMetadata(uniqueListings[i].metadata);
+                        //console.log(uniqueListings[i].url.substring(0,25) + ' ' + JSON.stringify(processed))
+                        uniqueListings[i] = { ...uniqueListings[i], ...processed };
                     }
                     catch (error) {
                         console.log('Failed to process metadata: ', error);
@@ -398,19 +404,21 @@ async function main() {
 
             }
 
-
+            //compare against dataset
             const existingMap = new Map(listingsFileData.map(item => [item.id, item]));
 
             // 2. Prepare arrays for new and updated listings
             const toNotify = [];
             const updatedDataMap = new Map(existingMap); // Start with all existing
 
-            for (const listing of mergedListings) {
+            for (const listing of uniqueListings) {
                 const existing = existingMap.get(listing.id);
                 if (!existing) {
                     // Not in DB, it's new
                     toNotify.push(listing);
                     updatedDataMap.set(listing.id, listing);
+                    //get routing to airport + hometown
+                    listing.routes = await maps.getRoutes(listing);
                 }
                 else if (!existingMap.get(listing.metadata)) {
                     updatedDataMap.set(listing.id, listing); //missing metadata so we replace it with fresh set
@@ -438,8 +446,8 @@ async function main() {
 
             for (const listing of toNotify) {
                 console.log(listing.url)
-                const embed = await constructEmbed(listing);
-                await sendEmbed(embed);
+                const embed = await discord.constructEmbed(listing);
+                await discord.sendEmbed(embed);
             }
 
             await closeBrowserWithTimeout(browser, pid);
