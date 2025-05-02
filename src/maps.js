@@ -8,7 +8,11 @@ const DEPARTURE_TIME = "2025-05-05T06:00:00Z"; //routes on a monday morning
 
 async function getRoutes(origin) {
 
-    const destinations = [{ street: "Aviatická", town: "Praha 6" }, { street: "Sokolovská", town: "Karlovy Vary" }]
+    if (!process.env.GOOGLE_APIKEY) {
+        throw new Error('Google API Key is required to perform this action!');
+    }
+
+    const destinations = [{ street: "Aviatická", town: "Praha 6" }, { street: "Sokolovská 483/100", town: "Karlovy Vary 5" }]
     //origin must include street, town, country
     let routes = [];
 
