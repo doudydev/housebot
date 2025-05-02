@@ -12,6 +12,9 @@ async function getRoutes(origin) {
     //origin must include street, town, country
     let routes = [];
 
+    //in case no street was provided
+    if (!origin.street) origin.street = '';
+
     destinations.forEach(async (destination) => {
 
         const [kilometers, time] = await routeSubroutine(origin, destination);
@@ -35,7 +38,7 @@ async function getRoutes(origin) {
 }
 
 async function routeSubroutine(origin, destination) {
-    
+
     const jsonData = {
         "origin": {
             "address": `${origin.street}, ${origin.town}, ${COUNTRY}`
