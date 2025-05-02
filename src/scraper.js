@@ -14,7 +14,7 @@ const maps = require('./maps.js');
 const config = require('../data/config.json');
 
 const MAX_LISTING_PRICE = config.max_listing_price;
-const ENABLE_ROUTES = config.enable_routes;
+const ENABLE_ROUTES = config.routes.enable_routes;
 const IDNES_URLS = config.idnes_urls;
 const SREALITY_URLS = config.sreality_urls;
 const BEZREALITKY_URLS = config.bezrealitky_urls;
@@ -59,10 +59,6 @@ async function bezRealitky() {
         listings = await data.json();
         if (listings.data?.markers) resultsArr = [...resultsArr, ...listings.data.markers.slice(0, 25)];
     }
-
-    let flats = await fetch(url, options);
-    flats = await flats.json();
-    if (flats.data?.markers) resultsArr = [...resultsArr, ...flats.data.markers];
 
     const finalArr = resultsArr.map((listing, i) => ({
         id: listing.id,
@@ -124,10 +120,17 @@ async function sRealityCurl() {
             throw new Error(`HTTP status code ${statusCode}`);
         }
         const textData = result.response;
+        console.log(textData.substring(0, 200));
         const jsonResult = await parseHtml('sreality', textData);
         arr = [...arr, ...jsonResult];
+
+        await sleep(2000);
     }
 
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function iDnes(page) {
@@ -166,6 +169,10 @@ async function parseHtml(site, html) {
 
     if (site === 'sreality') links = document.querySelector('[data-e2e="estates-list"]')?.querySelectorAll('.MuiTypography-root.MuiTypography-inherit.MuiLink-root.MuiLink-underlineAlways');
     if (site === 'idnes') links = document.querySelectorAll('.c-products__link');
+
+    if (!links) {
+        throw new Error('Links is empty!');
+    }
 
     links = Array.from(links);
     let listings = [];
@@ -286,15 +293,17 @@ async function processMetadata(metadata) {
         const parts = metadata.title.split(',');
 
         // Get the last two parts, trimming whitespace
-        const street = parts[parts.length - 2].trim();
-        const town = parts[parts.length - 1].trim();
+        const street = parts[parts.length - 2]?.trim();
+        const town = parts[parts.length - 1]?.trim();
 
         // Replace spaces with plus signs
         const streetPlus = street.replace(/\s+/g, '+');
         const townPlus = town.replace(/\s+/g, '+');
 
         // Create the result object
-        const price = metadata.description.match(/; (.*?Kč)/)[1].replace('Kč', '');
+        let price;
+        const match = metadata.description.match(/; (.*?Kč)/);
+        if (match) price = Number(match[1].replace(/\s|Kč/gm, ''));
 
         obj = {
             price: price,
@@ -336,7 +345,9 @@ async function processMetadata(metadata) {
         street = street.replace(/\s+/g, '+');
         town = town.replace(/\s+/g, '+');
 
-        const price = metadata.description.match(/\d{1,3}(?: \d{3})* Kč/).replace('Kč', '');
+        let price;
+        const match = metadata.description.match(/\d{1,3}(?: \d{3})* Kč/);
+        if (match) price = Number(match[0].replace(/\s|Kč/gm, ''));
 
         obj = {
             price: price,
@@ -370,7 +381,9 @@ async function processMetadata(metadata) {
         street = street.replace(/\s+/g, '+');
         town = town.replace(/\s+/g, '+');
 
-        const price = metadata.description.match(/\d{1,3}(?: \d{3})* Kč/).replace('Kč', '');
+        let price;
+        const match = metadata.description.match(/\d{1,3}(?: \d{3})* Kč/);
+        if (match) price = Number(match[0].replace(/\s|Kč/gm, ''));
 
         obj = {
             price: price,
@@ -400,7 +413,12 @@ async function main() {
 
             //sreality failed to fetch headful, try ts curl
             if (sreality && sreality.length === 0) {
-                sreality = await sRealityCurl();
+                try {
+                    sreality = await sRealityCurl();
+                }
+                catch(error) {
+                    console.log('Failed to fetch fallback Sreality! ', error);
+                }
             }
 
             let idnes = await iDnes(page);
@@ -460,28 +478,28 @@ async function main() {
             const toNotify = [];
             const updatedDataMap = new Map(existingMap); // Start with all existing
 
-            for (let listing of uniqueListings) {
-                const existing = existingMap.get(listing.id);
-                if (ENABLE_ROUTES) listing.routes = await maps.getRoutes(listing);
+            for (let i = 0; i < uniqueListings.length; i++) {
+                const existing = existingMap.get(uniqueListings[i].id);
+                if (ENABLE_ROUTES) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
 
                 if (!existing) {
                     // Not in DB, it's new
-                    toNotify.push(listing);
+                    toNotify.push(uniqueListings[i]);
                     //get routing to airport + hometown
-                    updatedDataMap.set(listing.id, listing);
+                    updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]);
                 }
-                else if (!existingMap.get(listing.metadata)) {
-                    updatedDataMap.set(listing.id, listing); //missing metadata so we replace it with fresh set
+                else if (!existingMap.get(uniqueListings[i].metadata)) {
+                    updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]); //missing metadata so we replace it with fresh set
                 }
                 else {
                     // Exists, check timestamp
                     const oldTime = new Date(existing.timestamp).getTime();
-                    const newTime = new Date(listing.timestamp).getTime();
-                    if ((listing.url.includes('bezrealitky') && (newTime - oldTime >= ONE_DAY_MS * 2)) ||
-                        (!listing.url.includes('bezrealitky') && (newTime - oldTime >= ONE_DAY_MS))) {
+                    const newTime = new Date(uniqueListings[i].timestamp).getTime();
+                    if ((uniqueListings[i].url.includes('bezrealitky') && (newTime - oldTime >= ONE_DAY_MS * 2)) ||
+                        (!uniqueListings[i].url.includes('bezrealitky') && (newTime - oldTime >= ONE_DAY_MS))) {
                         // At least 1 day newer, treat as new/updated
-                        toNotify.push(listing);
-                        updatedDataMap.set(listing.id, listing); // Replace with fresher
+                        toNotify.push(uniqueListings[i]);
+                        updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]); // Replace with fresher
                     }
                     // Else: skip, it's not significantly newer
                 }
