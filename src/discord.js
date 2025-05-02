@@ -53,7 +53,7 @@ async function constructEmbed(listing) {
     //form query
     let fieldsArr = [];
 
-    if (listing.price) fieldsArr.push({ name: 'Cena', value: `${price} Kč` });
+    if (listing.price) fieldsArr.push({ name: 'Cena', value: `${listing.price.toLocaleString('fr-FR')} Kč` });
 
     let query;
 
@@ -66,28 +66,23 @@ async function constructEmbed(listing) {
 
     fieldsArr.push({ name: 'Google Maps', value: `[HERE 📌](https://www.google.com/maps/search/?api=1&query=${query})`, inline: true })
 
-    for (const route in listing.routes) {
+    for (let i = 0; i < listing.routes.length; i++) {
 
-        let town = route.town;
+        const route = listing.routes[i].destination;
 
-        switch (route.town) {
-            case 'Praha': {
-                town = 'PRG';
-                break;
-            }
+        let town = route.destination.town;
 
-            case 'Karlovy Vary': {
-                town = 'KV';
-                break;
-            }
-
-            default: {
-                town = await abbreviateTown(route);
-                break;
-            }
+        if (town.includes('Praha')) {
+            town = 'PRG'
         }
-        
-        const emoji = (route.emoji) ? route.emoji : '';
+        else if (town.includes('Karlovy Vary')) {
+            town = 'KV'
+        }
+        else {
+            town = await abbreviateTown(route);
+        }
+
+        const emoji = (route.destination.emoji) ? route.emoji : '';
         fieldsArr.push({ name: `Cesta do ${town} ${emoji}`, value: `${route.distance} | ${route.time}`, inline: true });
     }
 
