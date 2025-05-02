@@ -1,6 +1,18 @@
-{
-    "enable_routes": true,
+{   
     "max_listing_price": 11000000,
+    "enable_routes": true,
+    "destinations": [
+        {
+            "street": "Aviatická",
+            "town": "Praha 6",
+            "emoji": "✈️"
+        },
+        {
+            "street": "Sokolovská 483/100",
+            "town": "Karlovy Vary 5",
+            "emoji": "🏠"
+        }
+    ],
     "bezrealitky_urls": [
         {
             "operationName": "MarkerList",
