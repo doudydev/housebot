@@ -25,7 +25,7 @@ async function botInit() {
 
 async function constructEmbed(listing) {
 
-    const metadata = listing.metadata;
+    const metadata = listing.metadata;10
     const url = metadata.url;
 
     let siteColor = "#ffffff";
@@ -49,8 +49,17 @@ async function constructEmbed(listing) {
     //form query
     let fieldsArr = [];
 
-    let extractedPrice = metadata.description.match(/\d{1,3}(?: \d{3})* Kč/);
-    fieldsArr.push({ name: 'Cena', value: `${extractedPrice}` })
+    let extractedPrice;
+
+    if (!url.includes('sreality')) {
+        extractedPrice = metadata.description.match(/\d{1,3}(?: \d{3})* Kč/);
+    }
+    else {
+        //breaking chars in the price
+        extractedPrice = metadata.description.match(/; (.*?Kč)/)[1];
+    }
+
+    if (extractedPrice) fieldsArr.push({ name: 'Cena', value: `${extractedPrice}` });
 
     let query;
 
