@@ -1,18 +1,23 @@
-{   
+{
     "max_listing_price": 11000000,
-    "enable_routes": true,
-    "destinations": [
-        {
-            "street": "Aviatická",
-            "town": "Praha 6",
-            "emoji": "✈️"
-        },
-        {
-            "street": "Sokolovská 483/100",
-            "town": "Karlovy Vary 5",
-            "emoji": "🏠"
-        }
-    ],
+    "routes": {
+        "simulated_date": "2025-05-05T06:00:00Z",
+        "enable_routes": true,
+        "destinations": [
+            {
+                "street": "Aviatická",
+                "town": "Praha 6",
+                "country": "Czechia",
+                "emoji": "✈️"
+            },
+            {
+                "street": "Sokolovská 483/100",
+                "town": "Karlovy Vary 5",
+                "country": "Czechia",
+                "emoji": "🏠"
+            }
+        ]
+    },
     "bezrealitky_urls": [
         {
             "operationName": "MarkerList",
