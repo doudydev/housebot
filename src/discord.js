@@ -64,11 +64,31 @@ async function constructEmbed(listing) {
         query = listing.town;
     }
 
-    fieldsArr.push({ name: 'Google Maps', value: `[HERE 📌](https://www.google.com/maps/search/?api=1&query=${query})`, inline: true})
+    fieldsArr.push({ name: 'Google Maps', value: `[HERE 📌](https://www.google.com/maps/search/?api=1&query=${query})`, inline: true })
 
-    if (listing.routes && listing.routes[0]) {
-        fieldsArr.push({ name: 'Cesta do PRG ✈️', value: `${listing.routes[0].distance} | ${listing.routes[0].time}`, inline: true });
-        fieldsArr.push({ name: 'Cesta do KV 🏠', value: `${listing.routes[1].distance} | ${listing.routes[1].time}`, inline: true });
+    for (const route in listing.routes) {
+
+        let town = route.town;
+
+        switch (route.town) {
+            case 'Praha': {
+                town = 'PRG';
+                break;
+            }
+
+            case 'Karlovy Vary': {
+                town = 'KV';
+                break;
+            }
+
+            default: {
+                town = await abbreviateTown(route);
+                break;
+            }
+        }
+        
+        const emoji = (route.emoji) ? route.emoji : '';
+        fieldsArr.push({ name: `Cesta do ${town} ${emoji}`, value: `${route.distance} | ${route.time}`, inline: true });
     }
 
     return new Promise(resolve => {
@@ -108,6 +128,17 @@ async function sendEmbed(embed) {
 
     } catch (error) {
         console.error('Error trying to send a message: ', error);
+    }
+}
+
+async function abbreviateTown(route) {
+    const town = route.town || '';
+    const words = town.split('+').filter(Boolean); // Split by '+' and remove empty
+    if (words.length >= 2) {
+        // Take the first character of each word (including '-' if it's the first character)
+        return words.map(word => word[0]).join('');
+    } else {
+        return town;
     }
 }
 
