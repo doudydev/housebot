@@ -25,7 +25,11 @@ async function botInit() {
 
 async function constructEmbed(listing) {
 
-    const metadata = listing.metadata;10
+    if (!process.env.DISCORD_TOKEN || !process.env.CHANNEL_ID) {
+        throw new Error('Missing Discord Token or Channel ID!');
+    }
+
+    const metadata = listing.metadata;
     const url = metadata.url;
 
     let siteColor = "#ffffff";
@@ -49,17 +53,7 @@ async function constructEmbed(listing) {
     //form query
     let fieldsArr = [];
 
-    let extractedPrice;
-
-    if (!url.includes('sreality')) {
-        extractedPrice = metadata.description.match(/\d{1,3}(?: \d{3})* Kč/);
-    }
-    else {
-        //breaking chars in the price
-        extractedPrice = metadata.description.match(/; (.*?Kč)/)[1];
-    }
-
-    if (extractedPrice) fieldsArr.push({ name: 'Cena', value: `${extractedPrice}` });
+    if (listing.price) fieldsArr.push({ name: 'Cena', value: `${price} Kč` });
 
     let query;
 
@@ -103,9 +97,14 @@ async function sendEmbed(embed) {
         const webhooks = await channel.fetchWebhooks();
         const webhook = await webhooks.first();
 
-        await webhook.send({
-            embeds: [embed]
-        });
+        if (webhook) {
+            await webhook.send({
+                embeds: [embed]
+            });
+        }
+        else {
+            console.error('No Webhook present! Please set one up!');
+        }
 
     } catch (error) {
         console.error('Error trying to send a message: ', error);
