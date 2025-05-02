@@ -1,6 +1,7 @@
 'use strict';
 
 require('dotenv').config();
+const config = require('../data/config.json');
 
 const ENDPOINT = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 const COUNTRY = 'Czechia';
@@ -12,7 +13,7 @@ async function getRoutes(origin) {
         throw new Error('Google API Key is required to perform this action!');
     }
 
-    const destinations = [{ street: "Aviatická", town: "Praha 6" }, { street: "Sokolovská 483/100", town: "Karlovy Vary 5" }]
+    const destinations = config.destinations; 
     //origin must include street, town, country
     let routes = [];
 
@@ -81,7 +82,15 @@ async function routeSubroutine(origin, destination) {
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
-        const time = `${hours}h ${minutes}m ${seconds}s`;
+
+        let time; 
+        if (hours > 0) {
+            time = `${hours}h ${minutes}m ${seconds}s`;
+        }
+        else {
+            time = `${minutes}m ${seconds}s`; 
+        }
+        
         const kilometers = (route.distanceMeters / 1000).toFixed(2) + 'km'; // Use route.distanceMeters, not data.routes.distanceMeters
         return [kilometers, time];
     }

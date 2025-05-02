@@ -14,7 +14,10 @@ const maps = require('./maps.js');
 const config = require('../data/config.json');
 
 const MAX_LISTING_PRICE = config.max_listing_price;
-const ENABLE_ROUTES = config.enable_routes
+const ENABLE_ROUTES = config.enable_routes;
+const IDNES_URLS = config.idnes_urls;
+const SREALITY_URLS = config.sreality_urls;
+const BEZREALITKY_URLS = config.bezrealitky_urls;
 
 const FILE_PATH = './data/listings.json';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -35,22 +38,23 @@ console.error = (message, ...optionalParams) => {
 async function bezRealitky() {
     console.log('bezRealitky init');
 
-    const jsonArr = config.bezrealitky_urls;
+    const jsonArr = BEZREALITKY_URLS;
 
     let listings;
     let resultsArr = [];
 
     const url = 'https://api.bezrealitky.cz/graphql/';
 
-    const options = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(BEZREALITKY_HOUSES_JSON)
-    }
-
     for (let i = 0; i < jsonArr.length; i++) {
+
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(jsonArr[i])
+        }
+
         let data = await fetch(url, options);
         listings = await data.json();
         if (listings.data?.markers) resultsArr = [...resultsArr, ...listings.data.markers.slice(0, 25)];
@@ -73,7 +77,7 @@ async function bezRealitky() {
 async function sReality(page) {
     console.log('sReality init');
 
-    const urlArr = config.sreality_urls;
+    const urlArr = SREALITY_URLS;
 
     let html;
     let listings;
@@ -130,7 +134,7 @@ async function iDnes(page) {
 
     console.log('Idnes init')
 
-    const urlArr = config.idnes_urls;
+    const urlArr = IDNES_URLS;
 
     let html;
     let listings;
@@ -458,12 +462,12 @@ async function main() {
 
             for (let listing of uniqueListings) {
                 const existing = existingMap.get(listing.id);
+                if (ENABLE_ROUTES) listing.routes = await maps.getRoutes(listing);
+
                 if (!existing) {
                     // Not in DB, it's new
                     toNotify.push(listing);
                     //get routing to airport + hometown
-                    if (ENABLE_ROUTES) listing.routes = await maps.getRoutes(listing);
-
                     updatedDataMap.set(listing.id, listing);
                 }
                 else if (!existingMap.get(listing.metadata)) {
@@ -477,7 +481,6 @@ async function main() {
                         (!listing.url.includes('bezrealitky') && (newTime - oldTime >= ONE_DAY_MS))) {
                         // At least 1 day newer, treat as new/updated
                         toNotify.push(listing);
-                        if (ENABLE_ROUTES) listing.routes = await maps.getRoutes(listing);
                         updatedDataMap.set(listing.id, listing); // Replace with fresher
                     }
                     // Else: skip, it's not significantly newer
