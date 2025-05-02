@@ -1,17 +1,18 @@
 'use strict';
 
+const fs = require('fs');
 const { chromium } = require('patchright');
 const cron = require("cron");
 const urlMetadata = require('url-metadata');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
+const { RequestBuilder } = require('ts-curl-impersonate')
+
+//LOCAL FILES
+const discord = require('./discord.js');
 const maps = require('./maps.js');
 
-const fs = require('fs');
 const FILE_PATH = './data/listings.json';
-
-const discord = require('./discord.js');
-
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 const BEZREALITKY_HOUSES_JSON = { "operationName": "MarkerList", "variables": { "order": "TIMEORDER_DESC", "offerType": ["PRODEJ"], "estateType": ["DUM"], "disposition": ["DISP_3_KK", "DISP_3_1", "DISP_4_KK", "DISP_4_1", "DISP_5_KK", "DISP_5_1", "DISP_6_KK", "DISP_6_1", "DISP_7_KK", "DISP_7_1", "OSTATNI"], "priceTo": 10000000, "location": "fromMap", "country": "ceska-republika", "provinces": ["praha", "plzensky", "stredocesky"], "currency": "CZK", "regionOsmIds": ["R435541", "R442466", "R442397"], "construction": [] }, "query": "query MarkerList($estateType: [EstateType], $offerType: [OfferType], $disposition: [Disposition], $landType: [LandType], $region: ID, $regionOsmIds: [ID], $order: ResultOrder = TIMEORDER_DESC, $petFriendly: Boolean, $balconyFrom: Float, $balconyTo: Float, $loggiaFrom: Float, $loggiaTo: Float, $terraceFrom: Float, $terraceTo: Float, $cellarFrom: Float, $cellarTo: Float, $frontGardenFrom: Float, $frontGardenTo: Float, $parking: Boolean, $garage: Boolean, $lift: Boolean, $ownership: [Ownership], $condition: [Condition], $construction: [Construction], $equipped: [Equipped], $priceFrom: Int, $priceTo: Int, $surfaceFrom: Int, $surfaceTo: Int, $surfaceLandFrom: Int, $surfaceLandTo: Int, $advertId: [ID], $roommate: Boolean, $includeImports: Boolean, $boundaryPoints: [GPSPointInput], $discountedOnly: Boolean, $polygonBuffer: Int, $barrierFree: Boolean, $availableFrom: DateTime, $importType: AdvertImportType, $currency: Currency, $searchPriceWithCharges: Boolean, $lowEnergy: Boolean) {\n  markers: advertMarkers(\n    offerType: $offerType\n    estateType: $estateType\n    disposition: $disposition\n    landType: $landType\n    regionId: $region\n    regionOsmIds: $regionOsmIds\n    order: $order\n    petFriendly: $petFriendly\n    balconySurfaceFrom: $balconyFrom\n    balconySurfaceTo: $balconyTo\n    loggiaSurfaceFrom: $loggiaFrom\n    loggiaSurfaceTo: $loggiaTo\n    terraceSurfaceFrom: $terraceFrom\n    terraceSurfaceTo: $terraceTo\n    cellarSurfaceFrom: $cellarFrom\n    cellarSurfaceTo: $cellarTo\n    frontGardenSurfaceFrom: $frontGardenFrom\n    frontGardenSurfaceTo: $frontGardenTo\n    parking: $parking\n    garage: $garage\n    lift: $lift\n    ownership: $ownership\n    condition: $condition\n    construction: $construction\n    equipped: $equipped\n    priceFrom: $priceFrom\n    priceTo: $priceTo\n    surfaceFrom: $surfaceFrom\n    surfaceTo: $surfaceTo\n    surfaceLandFrom: $surfaceLandFrom\n    surfaceLandTo: $surfaceLandTo\n    ids: $advertId\n    roommate: $roommate\n    includeImports: $includeImports\n    boundaryPoints: $boundaryPoints\n    discountedOnly: $discountedOnly\n    polygonBuffer: $polygonBuffer\n    barrierFree: $barrierFree\n    availableFrom: $availableFrom\n    importType: $importType\n    currency: $currency\n    searchPriceWithCharges: $searchPriceWithCharges\n    lowEnergy: $lowEnergy\n  ) {\n    id\n    uri\n    estateType\n    gps {\n      lat\n      lng\n      __typename\n    }\n    __typename\n  }\n}" }
@@ -63,7 +64,7 @@ async function bezRealitky() {
     for (let i = 0; i < jsonArr.length; i++) {
         let data = await fetch(url, options);
         listings = await data.json();
-        if (listings.data?.markers) resultsArr = [...resultsArr, ...listings.data.markers];
+        if (listings.data?.markers) resultsArr = [...resultsArr, ...listings.data.markers.slice(0,25)];
     }
 
     let flats = await fetch(url, options);
@@ -101,7 +102,7 @@ async function sReality(page) {
             firstLaunch = false;
         }
 
-        await page.waitForTimeout(5000);
+        await page.waitForTimeout(3000);
 
         html = await page.content();
         listings = await parseHtml('sreality', html);
@@ -114,13 +115,35 @@ async function sReality(page) {
     return arr;
 }
 
+async function sRealityCurl() {
+
+    console.log('Headless browser failed, attempting fallback scrape with curl-impersonate');
+
+    const urlArr = [SREALITY_KLADNO_URL, SREALITY_PLZENSKY_URL, SREALITY_STREDOCESKY_URL];
+
+    let arr = [];
+
+    for (let i = 0; i < urlArr.length; i++) {
+        const result = await new RequestBuilder().url(urlArr[i]).send();
+
+        const statusCode = result.status;
+        if ((statusCode < 200 || statusCode > 299) && statusCode != 400) {
+          throw new Error(`HTTP status code ${statusCode}`);
+        }
+        const textData = result.response;
+        const jsonResult = await parseHtml('sreality', textData);
+        arr = [...arr, ...jsonResult];
+    }
+
+}
+
 async function parseHtml(site, html) {
     // Parse the HTML
     const dom = new JSDOM(html);
     const document = dom.window.document;
     let links;
 
-    if (site === 'sreality') links = document.querySelector('[data-e2e="estates-list"]').querySelectorAll('.MuiTypography-root.MuiTypography-inherit.MuiLink-root.MuiLink-underlineAlways');
+    if (site === 'sreality') links = document.querySelector('[data-e2e="estates-list"]')?.querySelectorAll('.MuiTypography-root.MuiTypography-inherit.MuiLink-root.MuiLink-underlineAlways');
     if (site === 'idnes') links = document.querySelectorAll('.c-products__link');
 
     links = Array.from(links);
@@ -133,7 +156,7 @@ async function parseHtml(site, html) {
             const hasTip = Array.from(links[0].querySelectorAll('*'))
                 .some(el => el.textContent.includes('TIP'));
 
-            if (links[i].href.includes('click?') || links[i].href.includes('projekt-detail') || hasTip) {
+            if (links[i].href.includes('click?') || links[i].href.includes('projekt-detail') || links[i].href.includes('sreality.czhttps') || hasTip) {
                 links.splice(i, 1);
                 continue;
             }
@@ -372,14 +395,22 @@ async function main() {
             const [browser, page, pid] = await launchBrowser();
 
             let sreality = await sReality(page);
+
+            //sreality failed to fetch headful, try ts curl
+            if (sreality && sreality.length === 0) {
+                sreality = await sRealityCurl();
+            }
+
             let idnes = await iDnes(page);
+
+            console.log('BZ ', bezrealitky.length);
+            console.log('SR ', sreality.length);
+            console.log('ID ', idnes.length);
 
             const mergedListings = [...bezrealitky, ...sreality, ...idnes];
             const uniqueListings = mergedListings.filter((listing, index, array) => {
                 return array.findIndex(item => item.id === listing.id) === index;
             });
-            
-            console.log(uniqueListings.length);
 
             for (let i = 0; i < uniqueListings.length; i++) {
                 if (!uniqueListings[i].metadata) {
@@ -411,14 +442,14 @@ async function main() {
             const toNotify = [];
             const updatedDataMap = new Map(existingMap); // Start with all existing
 
-            for (const listing of uniqueListings) {
+            for (let listing of uniqueListings) {
                 const existing = existingMap.get(listing.id);
                 if (!existing) {
                     // Not in DB, it's new
                     toNotify.push(listing);
-                    updatedDataMap.set(listing.id, listing);
                     //get routing to airport + hometown
                     listing.routes = await maps.getRoutes(listing);
+                    updatedDataMap.set(listing.id, listing);
                 }
                 else if (!existingMap.get(listing.metadata)) {
                     updatedDataMap.set(listing.id, listing); //missing metadata so we replace it with fresh set
