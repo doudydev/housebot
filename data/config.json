@@ -1,0 +1,140 @@
+{
+    "enable_routes": true,
+    "max_listing_price": 11000000,
+    "bezrealitky_urls": [
+        {
+            "operationName": "MarkerList",
+            "variables": {
+                "order": "TIMEORDER_DESC",
+                "offerType": [
+                    "PRODEJ"
+                ],
+                "estateType": [
+                    "DUM"
+                ],
+                "disposition": [
+                    "DISP_3_KK",
+                    "DISP_3_1",
+                    "DISP_4_KK",
+                    "DISP_4_1",
+                    "DISP_5_KK",
+                    "DISP_5_1",
+                    "DISP_6_KK",
+                    "DISP_6_1",
+                    "DISP_7_KK",
+                    "DISP_7_1",
+                    "OSTATNI"
+                ],
+                "priceTo": 10000000,
+                "location": "fromMap",
+                "country": "ceska-republika",
+                "provinces": [
+                    "praha",
+                    "plzensky",
+                    "stredocesky"
+                ],
+                "currency": "CZK",
+                "regionOsmIds": [
+                    "R435541",
+                    "R442466",
+                    "R442397"
+                ],
+                "construction": []
+            },
+            "query": "query MarkerList($estateType: [EstateType], $offerType: [OfferType], $disposition: [Disposition], $landType: [LandType], $region: ID, $regionOsmIds: [ID], $order: ResultOrder = TIMEORDER_DESC, $petFriendly: Boolean, $balconyFrom: Float, $balconyTo: Float, $loggiaFrom: Float, $loggiaTo: Float, $terraceFrom: Float, $terraceTo: Float, $cellarFrom: Float, $cellarTo: Float, $frontGardenFrom: Float, $frontGardenTo: Float, $parking: Boolean, $garage: Boolean, $lift: Boolean, $ownership: [Ownership], $condition: [Condition], $construction: [Construction], $equipped: [Equipped], $priceFrom: Int, $priceTo: Int, $surfaceFrom: Int, $surfaceTo: Int, $surfaceLandFrom: Int, $surfaceLandTo: Int, $advertId: [ID], $roommate: Boolean, $includeImports: Boolean, $boundaryPoints: [GPSPointInput], $discountedOnly: Boolean, $polygonBuffer: Int, $barrierFree: Boolean, $availableFrom: DateTime, $importType: AdvertImportType, $currency: Currency, $searchPriceWithCharges: Boolean, $lowEnergy: Boolean) {\n  markers: advertMarkers(\n    offerType: $offerType\n    estateType: $estateType\n    disposition: $disposition\n    landType: $landType\n    regionId: $region\n    regionOsmIds: $regionOsmIds\n    order: $order\n    petFriendly: $petFriendly\n    balconySurfaceFrom: $balconyFrom\n    balconySurfaceTo: $balconyTo\n    loggiaSurfaceFrom: $loggiaFrom\n    loggiaSurfaceTo: $loggiaTo\n    terraceSurfaceFrom: $terraceFrom\n    terraceSurfaceTo: $terraceTo\n    cellarSurfaceFrom: $cellarFrom\n    cellarSurfaceTo: $cellarTo\n    frontGardenSurfaceFrom: $frontGardenFrom\n    frontGardenSurfaceTo: $frontGardenTo\n    parking: $parking\n    garage: $garage\n    lift: $lift\n    ownership: $ownership\n    condition: $condition\n    construction: $construction\n    equipped: $equipped\n    priceFrom: $priceFrom\n    priceTo: $priceTo\n    surfaceFrom: $surfaceFrom\n    surfaceTo: $surfaceTo\n    surfaceLandFrom: $surfaceLandFrom\n    surfaceLandTo: $surfaceLandTo\n    ids: $advertId\n    roommate: $roommate\n    includeImports: $includeImports\n    boundaryPoints: $boundaryPoints\n    discountedOnly: $discountedOnly\n    polygonBuffer: $polygonBuffer\n    barrierFree: $barrierFree\n    availableFrom: $availableFrom\n    importType: $importType\n    currency: $currency\n    searchPriceWithCharges: $searchPriceWithCharges\n    lowEnergy: $lowEnergy\n  ) {\n    id\n    uri\n    estateType\n    gps {\n      lat\n      lng\n      __typename\n    }\n    __typename\n  }\n}"
+        },
+        {
+            "operationName": "MarkerList",
+            "variables": {
+                "order": "TIMEORDER_DESC",
+                "offerType": [
+                    "PRODEJ"
+                ],
+                "estateType": [
+                    "BYT"
+                ],
+                "disposition": [
+                    "DISP_3_KK",
+                    "DISP_3_1",
+                    "DISP_4_KK",
+                    "DISP_4_1",
+                    "DISP_5_KK",
+                    "DISP_5_1",
+                    "DISP_6_KK",
+                    "DISP_6_1",
+                    "DISP_7_KK",
+                    "DISP_7_1",
+                    "OSTATNI"
+                ],
+                "priceTo": 10000000,
+                "location": "fromMap",
+                "country": "ceska-republika",
+                "provinces": [
+                    "praha",
+                    "plzensky",
+                    "stredocesky"
+                ],
+                "currency": "CZK",
+                "regionOsmIds": [
+                    "R435541",
+                    "R442466",
+                    "R442397"
+                ],
+                "construction": []
+            },
+            "query": "query MarkerList($estateType: [EstateType], $offerType: [OfferType], $disposition: [Disposition], $landType: [LandType], $region: ID, $regionOsmIds: [ID], $order: ResultOrder = TIMEORDER_DESC, $petFriendly: Boolean, $balconyFrom: Float, $balconyTo: Float, $loggiaFrom: Float, $loggiaTo: Float, $terraceFrom: Float, $terraceTo: Float, $cellarFrom: Float, $cellarTo: Float, $frontGardenFrom: Float, $frontGardenTo: Float, $parking: Boolean, $garage: Boolean, $lift: Boolean, $ownership: [Ownership], $condition: [Condition], $construction: [Construction], $equipped: [Equipped], $priceFrom: Int, $priceTo: Int, $surfaceFrom: Int, $surfaceTo: Int, $surfaceLandFrom: Int, $surfaceLandTo: Int, $advertId: [ID], $roommate: Boolean, $includeImports: Boolean, $boundaryPoints: [GPSPointInput], $discountedOnly: Boolean, $polygonBuffer: Int, $barrierFree: Boolean, $availableFrom: DateTime, $importType: AdvertImportType, $currency: Currency, $searchPriceWithCharges: Boolean, $lowEnergy: Boolean) {\n  markers: advertMarkers(\n    offerType: $offerType\n    estateType: $estateType\n    disposition: $disposition\n    landType: $landType\n    regionId: $region\n    regionOsmIds: $regionOsmIds\n    order: $order\n    petFriendly: $petFriendly\n    balconySurfaceFrom: $balconyFrom\n    balconySurfaceTo: $balconyTo\n    loggiaSurfaceFrom: $loggiaFrom\n    loggiaSurfaceTo: $loggiaTo\n    terraceSurfaceFrom: $terraceFrom\n    terraceSurfaceTo: $terraceTo\n    cellarSurfaceFrom: $cellarFrom\n    cellarSurfaceTo: $cellarTo\n    frontGardenSurfaceFrom: $frontGardenFrom\n    frontGardenSurfaceTo: $frontGardenTo\n    parking: $parking\n    garage: $garage\n    lift: $lift\n    ownership: $ownership\n    condition: $condition\n    construction: $construction\n    equipped: $equipped\n    priceFrom: $priceFrom\n    priceTo: $priceTo\n    surfaceFrom: $surfaceFrom\n    surfaceTo: $surfaceTo\n    surfaceLandFrom: $surfaceLandFrom\n    surfaceLandTo: $surfaceLandTo\n    ids: $advertId\n    roommate: $roommate\n    includeImports: $includeImports\n    boundaryPoints: $boundaryPoints\n    discountedOnly: $discountedOnly\n    polygonBuffer: $polygonBuffer\n    barrierFree: $barrierFree\n    availableFrom: $availableFrom\n    importType: $importType\n    currency: $currency\n    searchPriceWithCharges: $searchPriceWithCharges\n    lowEnergy: $lowEnergy\n  ) {\n    id\n    uri\n    estateType\n    gps {\n      lat\n      lng\n      __typename\n    }\n    __typename\n  }\n}"
+        },
+        {
+            "operationName": "MarkerList",
+            "variables": {
+                "order": "TIMEORDER_DESC",
+                "offerType": [
+                    "PRODEJ"
+                ],
+                "estateType": [
+                    "DUM"
+                ],
+                "disposition": [
+                    "DISP_3_KK",
+                    "DISP_3_1",
+                    "DISP_4_KK",
+                    "DISP_4_1",
+                    "DISP_5_KK",
+                    "DISP_5_1",
+                    "DISP_6_KK",
+                    "DISP_6_1",
+                    "DISP_7_KK",
+                    "DISP_7_1",
+                    "OSTATNI"
+                ],
+                "priceTo": 10000000,
+                "location": "fromMap",
+                "country": "ceska-republika",
+                "provinces": [
+                    "praha",
+                    "plzensky",
+                    "stredocesky"
+                ],
+                "currency": "CZK",
+                "regionOsmIds": [
+                    "R435541",
+                    "R442466",
+                    "R442397"
+                ],
+                "construction": []
+            },
+            "query": "query MarkerList($estateType: [EstateType], $offerType: [OfferType], $disposition: [Disposition], $landType: [LandType], $region: ID, $regionOsmIds: [ID], $order: ResultOrder = TIMEORDER_DESC, $petFriendly: Boolean, $balconyFrom: Float, $balconyTo: Float, $loggiaFrom: Float, $loggiaTo: Float, $terraceFrom: Float, $terraceTo: Float, $cellarFrom: Float, $cellarTo: Float, $frontGardenFrom: Float, $frontGardenTo: Float, $parking: Boolean, $garage: Boolean, $lift: Boolean, $ownership: [Ownership], $condition: [Condition], $construction: [Construction], $equipped: [Equipped], $priceFrom: Int, $priceTo: Int, $surfaceFrom: Int, $surfaceTo: Int, $surfaceLandFrom: Int, $surfaceLandTo: Int, $advertId: [ID], $roommate: Boolean, $includeImports: Boolean, $boundaryPoints: [GPSPointInput], $discountedOnly: Boolean, $polygonBuffer: Int, $barrierFree: Boolean, $availableFrom: DateTime, $importType: AdvertImportType, $currency: Currency, $searchPriceWithCharges: Boolean, $lowEnergy: Boolean) {\n  markers: advertMarkers(\n    offerType: $offerType\n    estateType: $estateType\n    disposition: $disposition\n    landType: $landType\n    regionId: $region\n    regionOsmIds: $regionOsmIds\n    order: $order\n    petFriendly: $petFriendly\n    balconySurfaceFrom: $balconyFrom\n    balconySurfaceTo: $balconyTo\n    loggiaSurfaceFrom: $loggiaFrom\n    loggiaSurfaceTo: $loggiaTo\n    terraceSurfaceFrom: $terraceFrom\n    terraceSurfaceTo: $terraceTo\n    cellarSurfaceFrom: $cellarFrom\n    cellarSurfaceTo: $cellarTo\n    frontGardenSurfaceFrom: $frontGardenFrom\n    frontGardenSurfaceTo: $frontGardenTo\n    parking: $parking\n    garage: $garage\n    lift: $lift\n    ownership: $ownership\n    condition: $condition\n    construction: $construction\n    equipped: $equipped\n    priceFrom: $priceFrom\n    priceTo: $priceTo\n    surfaceFrom: $surfaceFrom\n    surfaceTo: $surfaceTo\n    surfaceLandFrom: $surfaceLandFrom\n    surfaceLandTo: $surfaceLandTo\n    ids: $advertId\n    roommate: $roommate\n    includeImports: $includeImports\n    boundaryPoints: $boundaryPoints\n    discountedOnly: $discountedOnly\n    polygonBuffer: $polygonBuffer\n    barrierFree: $barrierFree\n    availableFrom: $availableFrom\n    importType: $importType\n    currency: $currency\n    searchPriceWithCharges: $searchPriceWithCharges\n    lowEnergy: $lowEnergy\n  ) {\n    id\n    uri\n    estateType\n    gps {\n      lat\n      lng\n      __typename\n    }\n    __typename\n  }\n}"
+        }
+    ],
+    "sreality_urls": [
+        "https://www.sreality.cz/hledani/prodej/byty,domy/praha,stredocesky-kraj?stav=developerske-projekty%2Cnovostavby%2Cpo-rekonstrukci%2Cvelmi-dobry-stav&cena-do=10500000&plocha-od=90",
+        "https://www.sreality.cz/hledani/prodej/byty,domy/plzen,rokycany?stav=developerske-projekty%2Cnovostavby%2Cvelmi-dobry-stav&cena-do=10658046&plocha-od=80",
+        "https://www.sreality.cz/hledani/prodej/pozemky/praha,stredocesky-kraj?cena-do=11000000https://www.sreality.cz/hledani/prodej/pozemky/praha,stredocesky-kraj?cena-do=11000000&lat-max=50.19931965562179&lat-min=50.103515010635334&lon-max=14.167203734026975&lon-min=14.057855436907836"
+    ],
+    "idnes_urls": [
+        "https://reality.idnes.cz/s/prodej/domy/kladno/?s-qc%5Bownership%5D%5B0%5D=personal",
+        "https://reality.idnes.cz/s/prodej/byty/kladno/?s-qc%5BusableAreaMin%5D=70&s-qc%5Bownership%5D%5B0%5D=personal",
+        "https://reality.idnes.cz/s/prodej/domy/cena-do-10500000/?s-l=VUSC-19%3BVUSC-27&s-qc%5BsubtypeHouse%5D%5B0%5D=house&s-qc%5BsubtypeHouse%5D%5B1%5D=turn-key&s-qc%5BsubtypeHouse%5D%5B2%5D=other&s-qc%5BusableAreaMin%5D=70&s-qc%5Bownership%5D%5B0%5D=personal",
+        "https://reality.idnes.cz/s/prodej/byty/cena-do-10500000/?s-l=VUSC-19%3BVUSC-27&s-qc%5BsubtypeFlat%5D%5B0%5D=4k&s-qc%5BsubtypeFlat%5D%5B1%5D=41&s-qc%5BsubtypeFlat%5D%5B2%5D=5k&s-qc%5BsubtypeFlat%5D%5B3%5D=51&s-qc%5BsubtypeFlat%5D%5B4%5D=6k&s-qc%5BsubtypeFlat%5D%5B5%5D=atypical&s-qc%5BusableAreaMin%5D=70&s-qc%5Bownership%5D%5B0%5D=personal"
+    ]
+}
