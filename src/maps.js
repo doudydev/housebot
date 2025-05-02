@@ -4,8 +4,8 @@ require('dotenv').config();
 const config = require('../data/config.json');
 
 const ENDPOINT = 'https://routes.googleapis.com/directions/v2:computeRoutes';
-const COUNTRY = 'Czechia';
-const DEPARTURE_TIME = "2025-05-05T06:00:00Z"; //routes on a monday morning
+const ORIGIN_COUNTRY = 'Czechia';
+const DEPARTURE_TIME = config.routes.simulated_date; //routes on a monday morning
 
 async function getRoutes(origin) {
 
@@ -13,32 +13,32 @@ async function getRoutes(origin) {
         throw new Error('Google API Key is required to perform this action!');
     }
 
-    const destinations = config.destinations; 
+    const destinations = config.routes.destinations;
     //origin must include street, town, country
     let routes = [];
 
     //in case no street was provided
     if (!origin.street) origin.street = '';
 
-    destinations.forEach(async (destination) => {
+    for (let i = 0; i < destinations.length; i++) {
 
-        const [kilometers, time] = await routeSubroutine(origin, destination);
+        const [kilometers, time] = await routeSubroutine(origin, destinations[i]);
 
         routes.push({
             origin: {
                 street: origin.street,
-                town: origin.town
+                town: origin.town,
             },
             destination: {
-                street: destination.street,
-                town: destination.town
+                street: destinations[i].street,
+                town: destinations[i].town
             },
             distance: kilometers,
             time: time
         })
 
-    });
-
+    }
+    
     return routes;
 }
 
@@ -46,10 +46,10 @@ async function routeSubroutine(origin, destination) {
 
     const jsonData = {
         "origin": {
-            "address": `${origin.street}, ${origin.town}, ${COUNTRY}`
+            "address": `${origin.street}, ${origin.town}, ${ORIGIN_COUNTRY}`
         },
         "destination": {
-            "address": `${destination.street}, ${destination.town}, ${COUNTRY}`
+            "address": `${destination.street}, ${destination.town}, ${destination.country}`
         },
         "travelMode": "DRIVE",
         "routingPreference": "TRAFFIC_AWARE",
@@ -90,9 +90,12 @@ async function routeSubroutine(origin, destination) {
         else {
             time = `${minutes}m ${seconds}s`; 
         }
-        
+
         const kilometers = (route.distanceMeters / 1000).toFixed(2) + 'km'; // Use route.distanceMeters, not data.routes.distanceMeters
         return [kilometers, time];
+    }
+    else {
+        return [null, null];
     }
 }
 
