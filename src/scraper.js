@@ -6,7 +6,7 @@ const cron = require("cron");
 const urlMetadata = require('url-metadata');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
-const { RequestBuilder } = require('ts-curl-impersonate')
+const { RequestBuilder } = require('ts-curl-impersonate');
 
 //LOCAL FILES
 const discord = require('./discord.js');
@@ -21,6 +21,8 @@ const BEZREALITKY_URLS = config.bezrealitky_urls;
 
 const FILE_PATH = './data/listings.json';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+let main_is_running = false;
 
 const originalConsoleError = console.error;
 console.error = (message, ...optionalParams) => {
@@ -184,7 +186,12 @@ async function parseHtml(site, html) {
             const hasTip = Array.from(links[0].querySelectorAll('*'))
                 .some(el => el.textContent.includes('TIP'));
 
-            if (links[i].href.includes('click?') || links[i].href.includes('projekt-detail') || links[i].href.includes('sreality.czhttps') || hasTip) {
+            if (links[i].href.includes('click?') ||
+                links[i].href.includes('projekt-detail') ||
+                links[i].href.includes('sreality.czhttps') ||
+                links[i].href.includes('adresar') ||
+                links[i].href.includes('makleri') ||
+                hasTip) {
                 links.splice(i, 1);
                 continue;
             }
@@ -289,6 +296,7 @@ async function processMetadata(metadata) {
     let obj = {};
 
     if (metadata.url.includes('sreality')) {
+
         // Split the string by commas
         const parts = metadata.title.split(',');
 
@@ -297,8 +305,8 @@ async function processMetadata(metadata) {
         const town = parts[parts.length - 1]?.trim();
 
         // Replace spaces with plus signs
-        const streetPlus = street.replace(/\s+/g, '+');
-        const townPlus = town.replace(/\s+/g, '+');
+        const streetPlus = street?.replace(/\s+/g, '+');
+        const townPlus = town?.replace(/\s+/g, '+');
 
         // Create the result object
         let price;
@@ -392,14 +400,16 @@ async function processMetadata(metadata) {
         };
     }
 
-    if (obj.street.includes('m²') || obj.street.includes('pozemek')) obj.street = undefined;
-    if (obj.town.includes('m²')) obj.street = undefined;
+    if (obj.street?.includes('m²') || obj.street?.includes('pozemek')) obj.street = undefined;
+    if (obj.town?.includes('m²')) obj.street = undefined;
 
     return obj;
 }
 
 async function main() {
     try {
+
+        main_is_running = true;
 
         let listingsFileData = await fileData();
 
@@ -416,7 +426,7 @@ async function main() {
                 try {
                     sreality = await sRealityCurl();
                 }
-                catch(error) {
+                catch (error) {
                     console.log('Failed to fetch fallback Sreality! ', error);
                 }
             }
@@ -433,26 +443,23 @@ async function main() {
             });
 
             for (let i = 0; i < uniqueListings.length; i++) {
-                if (!uniqueListings[i].metadata) {
-                    let result = await urlMetadata(uniqueListings[i].url);
-                    uniqueListings[i].metadata = {
-                        url: result['og:url'],
-                        title: result['og:title'],
-                        site_name: result['og:site_name'],
-                        description: result['og:description'],
-                        image: result['og:image']
-                    }
-
-                    //processing metadata for street and town name
-                    try {
-                        const processed = await processMetadata(uniqueListings[i].metadata);
-                        uniqueListings[i] = { ...uniqueListings[i], ...processed };
-                    }
-                    catch (error) {
-                        console.log('Failed to process metadata: ', error);
-                    }
+                let result = await urlMetadata(uniqueListings[i].url);
+                uniqueListings[i].metadata = {
+                    url: result['og:url'],
+                    title: result['og:title'],
+                    site_name: result['og:site_name'],
+                    description: result['og:description'],
+                    image: result['og:image']
                 }
 
+                //processing metadata for street and town name
+                try {
+                    const processed = await processMetadata(uniqueListings[i].metadata);
+                    uniqueListings[i] = { ...uniqueListings[i], ...processed };
+                }
+                catch (error) {
+                    console.log('Failed to process metadata: ', error);
+                }
             }
 
             //exclude družstvení byty in praha and all listing under max price
@@ -480,10 +487,11 @@ async function main() {
 
             for (let i = 0; i < uniqueListings.length; i++) {
                 const existing = existingMap.get(uniqueListings[i].id);
-                if (ENABLE_ROUTES) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
+                if (ENABLE_ROUTES && (!uniqueListings[i].routes || uniqueListings[i].routes.length === 0)) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
 
                 if (!existing) {
                     // Not in DB, it's new
+                    uniqueListings[i].status = 'NEW';
                     toNotify.push(uniqueListings[i]);
                     //get routing to airport + hometown
                     updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]);
@@ -492,11 +500,33 @@ async function main() {
                     updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]); //missing metadata so we replace it with fresh set
                 }
                 else {
+                    uniqueListings[i].status = 'REPOST';
                     // Exists, check timestamp
                     const oldTime = new Date(existing.timestamp).getTime();
                     const newTime = new Date(uniqueListings[i].timestamp).getTime();
+                    const oldPrice = existing.price;
                     if ((uniqueListings[i].url.includes('bezrealitky') && (newTime - oldTime >= ONE_DAY_MS * 2)) ||
-                        (!uniqueListings[i].url.includes('bezrealitky') && (newTime - oldTime >= ONE_DAY_MS))) {
+                        (!uniqueListings[i].url.includes('bezrealitky') && (newTime - oldTime >= ONE_DAY_MS))
+                    ) {
+
+                        if (uniqueListings[i].price < oldPrice) {
+                            uniqueListings[i].status = 'PRICE';
+                            
+                            if (!uniqueListings[i].price_history) {
+                                uniqueListings[i].price_history = [];
+                            }
+        
+                            //check if latest added price is the same, then just shift it, then insert lower/higher price in
+                            if (uniqueListings[i].price_history.length > 0) {
+                                if (uniqueListings[i].price === uniqueListings[i].price_history[0].price) {
+                                    uniqueListings[i].price_history.shift();
+                                }
+                            }
+        
+                            //element is inserted into beginning of array
+                            uniqueListings[i].price_history.unshift({price: processedObj.price, timestamp: Date.now()});
+                        
+                        }
                         // At least 1 day newer, treat as new/updated
                         toNotify.push(uniqueListings[i]);
                         updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]); // Replace with fresher
@@ -519,18 +549,27 @@ async function main() {
             }
 
             await closeBrowserWithTimeout(browser, pid);
+
+            main_is_running = false;
         }
     }
     catch (error) {
         console.log('Main Error:', error);
+        main_is_running = false;
     }
 
 }
 
 //cronjob to run every hour fetching new listings
 const job = new cron.CronJob("0 0 * * * *", async () => {
-    await main();
-    console.log(`cron job @ ${new Date()}}`);
+    if (!main_is_running) {
+        await main();
+        console.log(`cron job @ ${new Date()}}`);
+    }
+    else {
+        console.log(`cron job failed - main is running already @ ${new Date()}}`);
+    }
+
 });
 
 job.start();
