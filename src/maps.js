@@ -31,14 +31,15 @@ async function getRoutes(origin) {
             },
             destination: {
                 street: destinations[i].street,
-                town: destinations[i].town
+                town: destinations[i].town,
+                emoji: destinations[i].emoji
             },
             distance: kilometers,
             time: time
         })
 
     }
-    
+
     return routes;
 }
 

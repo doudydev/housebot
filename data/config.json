@@ -146,7 +146,7 @@
     "sreality_urls": [
         "https://www.sreality.cz/hledani/prodej/byty,domy/praha,stredocesky-kraj?stav=developerske-projekty%2Cnovostavby%2Cpo-rekonstrukci%2Cvelmi-dobry-stav&cena-do=10500000&plocha-od=90",
         "https://www.sreality.cz/hledani/prodej/byty,domy/plzen,rokycany?stav=developerske-projekty%2Cnovostavby%2Cvelmi-dobry-stav&cena-do=10658046&plocha-od=80",
-        "https://www.sreality.cz/hledani/prodej/pozemky/praha,stredocesky-kraj?cena-do=11000000https://www.sreality.cz/hledani/prodej/pozemky/praha,stredocesky-kraj?cena-do=11000000&lat-max=50.19931965562179&lat-min=50.103515010635334&lon-max=14.167203734026975&lon-min=14.057855436907836"
+        "https://www.sreality.cz/hledani/prodej/pozemky/praha,stredocesky-kraj?cena-do=7000000&region=Kladno&region-id=3661&region-typ=municipality"
     ],
     "idnes_urls": [
         "https://reality.idnes.cz/s/prodej/domy/kladno/?s-qc%5Bownership%5D%5B0%5D=personal",
