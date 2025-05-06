@@ -487,16 +487,21 @@ async function main() {
 
             for (let i = 0; i < uniqueListings.length; i++) {
                 const existing = existingMap.get(uniqueListings[i].id);
-                if (ENABLE_ROUTES && (!uniqueListings[i].routes || uniqueListings[i].routes.length === 0)) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
 
                 if (!existing) {
                     // Not in DB, it's new
                     uniqueListings[i].status = 'NEW';
+                    if (ENABLE_ROUTES) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
                     toNotify.push(uniqueListings[i]);
                     //get routing to airport + hometown
                     updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]);
                 }
                 else if (!existingMap.get(uniqueListings[i].metadata)) {
+                    if (ENABLE_ROUTES && 
+                        (existing.routes || 
+                            (existing.routes?.distance && existing.routes?.time)
+                        )
+                    ) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
                     updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]); //missing metadata so we replace it with fresh set
                 }
                 else {
@@ -527,6 +532,13 @@ async function main() {
                             uniqueListings[i].price_history.unshift({price: processedObj.price, timestamp: Date.now()});
                         
                         }
+
+                        if (ENABLE_ROUTES && 
+                            (existing.routes || 
+                                (existing.routes?.distance && existing.routes?.time)
+                            )
+                        ) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
+                        
                         // At least 1 day newer, treat as new/updated
                         toNotify.push(uniqueListings[i]);
                         updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]); // Replace with fresher
