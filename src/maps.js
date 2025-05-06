@@ -5,7 +5,41 @@ const config = require('../data/config.json');
 
 const ENDPOINT = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 const ORIGIN_COUNTRY = 'Czechia';
-const DEPARTURE_TIME = config.routes.simulated_date; //routes on a monday morning
+
+function getNextMonday() {
+    const now = new Date();
+    const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Days until next Monday (if today is Monday, we want next Monday)
+    const daysToAdd = day === 1 ? 7 : (8 - day) % 7;
+    
+    // Set to next Monday
+    const nextMonday = new Date(now);
+    nextMonday.setDate(now.getDate() + daysToAdd);
+    
+    // Set time to 6:00 AM
+    nextMonday.setHours(8, 0, 0, 0);
+    
+    return nextMonday;
+}
+
+// Get the proper departure time
+let DEPARTURE_TIME;
+
+// Check if the configured date is in the future
+const configDate = new Date(config.routes.simulated_date);
+const now = new Date();
+
+if (configDate > now) {
+    // If the configured date is still in the future, use it
+    console.log("Using configured future date:", config.routes.simulated_date);
+    DEPARTURE_TIME = config.routes.simulated_date;
+} else {
+    // If the date has passed, get next Monday at 6 AM
+    const nextMonday = getNextMonday();
+    DEPARTURE_TIME = nextMonday.toISOString();
+    console.log("Configured date has passed. Using next Monday at 6 AM:", DEPARTURE_TIME);
+}
 
 async function getRoutes(origin) {
 
@@ -21,10 +55,12 @@ async function getRoutes(origin) {
     if (!origin.street) origin.street = '';
 
     for (let i = 0; i < destinations.length; i++) {
-
+        
         const [kilometers, time] = await routeSubroutine(origin, destinations[i]);
 
-        routes.push({
+        //console.log(`${kilometers} , ${time}`)
+
+        let object = {
             origin: {
                 street: origin.street,
                 town: origin.town,
@@ -36,7 +72,11 @@ async function getRoutes(origin) {
             },
             distance: kilometers,
             time: time
-        })
+        }
+
+        //console.log(object);
+
+        routes.push(object)
 
     }
 
@@ -50,7 +90,7 @@ async function routeSubroutine(origin, destination) {
             "address": `${origin.street}, ${origin.town}, ${ORIGIN_COUNTRY}`
         },
         "destination": {
-            "address": `${destination.street}, ${destination.town}, ${destination.country}`
+            "address": `${destination.street}, ${destination.town}, ${ORIGIN_COUNTRY}`
         },
         "travelMode": "DRIVE",
         "routingPreference": "TRAFFIC_AWARE",
@@ -75,27 +115,62 @@ async function routeSubroutine(origin, destination) {
         }
     }
 
-    const response = await fetch(ENDPOINT, options);
-    const data = await response.json();
-    if (data?.routes?.length > 0) {
-        const route = data.routes[0]; // Store the route in a variable
-        const totalSeconds = Number(route.duration.replace('s', '')); // Remove 's' from duration string
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-
-        let time; 
-        if (hours > 0) {
-            time = `${hours}h ${minutes}m ${seconds}s`;
+    try {
+        const response = await fetch(ENDPOINT, options);
+        
+        if (!response.ok) {
+            console.error(`API error: ${response.status} ${response.statusText}`);
+            return [null, null];
         }
-        else {
-            time = `${minutes}m ${seconds}s`; 
+        
+        const data = await response.json();
+        //console.log("API Response:", JSON.stringify(data, null, 2)); // Debug log
+        
+        if (data?.routes?.length > 0) {
+            const route = data.routes[0];
+            
+            // Handle different duration formats
+            let totalSeconds;
+            if (typeof route.duration === 'object' && route.duration.seconds) {
+                // If duration is an object with seconds property
+                totalSeconds = Number(route.duration.seconds);
+            } else if (typeof route.duration === 'string' && route.duration.endsWith('s')) {
+                // If duration is a string like "123s"
+                totalSeconds = Number(route.duration.replace('s', ''));
+            } else if (typeof route.duration === 'number') {
+                // If duration is directly a number
+                totalSeconds = route.duration;
+            } else {
+                console.error("Unexpected duration format:", route.duration);
+                return [null, null];
+            }
+            
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            let time;
+            if (hours > 0) {
+                time = `${hours}h ${minutes}m ${seconds}s`;
+            } else {
+                time = `${minutes}m ${seconds}s`;
+            }
+            
+            const distanceMeters = Number(route.distanceMeters);
+            if (isNaN(distanceMeters)) {
+                console.error("Invalid distance value:", route.distanceMeters);
+                return [null, null];
+            }
+            
+            const kilometers = (distanceMeters / 1000).toFixed(2) + 'km';
+            
+            return [kilometers, time];
+        } else {
+            console.error("No routes found in API response:", data);
+            return [null, null];
         }
-
-        const kilometers = (route.distanceMeters / 1000).toFixed(2) + 'km'; // Use route.distanceMeters, not data.routes.distanceMeters
-        return [kilometers, time];
-    }
-    else {
+    } catch (error) {
+        console.error("Error in routeSubroutine:", error);
         return [null, null];
     }
 }
