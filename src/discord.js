@@ -32,22 +32,27 @@ async function constructEmbed(listing) {
     const metadata = listing.metadata;
     const url = metadata.url;
 
+    let status = listing.status;
+    //status assignment
+    if (listing.status === 'PRICE') status = 'SLEVA';
+    if (listing.status === 'NEW') status = 'NOVÝ';
+
     let siteColor = "#ffffff";
-    let site;
+    let site = `[${status}] `;
 
     if (url.includes('sreality')) {
         siteColor = '#990000';
-        site = 'SREALITY 🔴';
+        site += `SREALITY 🔴`;
     }
 
     if (url.includes('bezrealitky')) {
         siteColor = '#1f9970';
-        site = 'BEZREALITKY 🟢';
+        site += `BEZREALITKY 🟢 `;
     }
 
     if (url.includes('idnes')) {
         siteColor = '#1d80d7';
-        site = 'IDNES 🔵';
+        site += `IDNES 🔵`;
     }
 
     //form query
@@ -64,26 +69,29 @@ async function constructEmbed(listing) {
         query = listing.town;
     }
 
-    fieldsArr.push({ name: 'Google Maps', value: `[HERE 📌](https://www.google.com/maps/search/?api=1&query=${query})`, inline: true })
+    fieldsArr.push({ name: 'Mapy 📌', value: `[ZDE](https://www.google.com/maps/search/?api=1&query=${query})`, inline: true });
 
     for (let i = 0; i < listing.routes.length; i++) {
 
-        const route = listing.routes[i].destination;
+        const route = listing.routes[i];
 
-        let town = route.destination.town;
+        if (route.distance && route.time) {
 
-        if (town.includes('Praha')) {
-            town = 'PRG'
-        }
-        else if (town.includes('Karlovy Vary')) {
-            town = 'KV'
-        }
-        else {
-            town = await abbreviateTown(route);
-        }
+            let town = route.destination.town;
 
-        const emoji = (route.destination.emoji) ? route.emoji : '';
-        fieldsArr.push({ name: `Cesta do ${town} ${emoji}`, value: `${route.distance} | ${route.time}`, inline: true });
+            if (town.includes('Praha')) {
+                town = 'PRG'
+            }
+            else if (town.includes('Karlovy Vary')) {
+                town = 'KV'
+            }
+            else {
+                town = await abbreviateTown(route);
+            }
+    
+            const emoji = (route.destination.emoji) ? route.destination.emoji : '';
+            fieldsArr.push({ name: `Cesta do ${town} ${emoji}`, value: `${route.distance} | ${route.time}`, inline: true });
+        }
     }
 
     return new Promise(resolve => {
