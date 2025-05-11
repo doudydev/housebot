@@ -18,4 +18,5 @@ Execute npm run start
 
 - Fix listing status tags 
 - Consider individual listings crawling for details
-- Look into limiting Maps API calls to not exceed Free Tier
+- Look into limiting Maps API calls to not exceed Free Tier ✔️  
+- Implement proxies to scrape Sreality due to IP throttling     
