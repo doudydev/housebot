@@ -462,7 +462,7 @@ async function main() {
                 }
             }
 
-            //exclude družstvení byty in praha and all listing under max price
+            //exclude družstevní byty in praha and all listing under max price
             //max price is set only for edge cases where a listing may slip aside from the provided URL parameters set
             uniqueListings = uniqueListings.filter(listing => {
                 const desc = listing.metadata?.description?.toLowerCase();
@@ -472,8 +472,8 @@ async function main() {
                 // 2. Doesn't contain "anuit" + excluded terms
                 return !(
                     desc &&
-                    desc.includes('anuit') &&
-                    (desc.includes('praha') || desc.includes('praze') || desc.includes('družst')) &&
+                    desc.includes('anuit') ||
+                    ((desc.includes('praha') || desc.includes('praze')) && desc.includes('družst')) &&
                     listing.price <= MAX_LISTING_PRICE
                 );
             });
@@ -497,11 +497,6 @@ async function main() {
                     updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]);
                 }
                 else if (!existingMap.get(uniqueListings[i].metadata)) {
-                    if (ENABLE_ROUTES && 
-                        (existing.routes || 
-                            (existing.routes?.distance && existing.routes?.time)
-                        )
-                    ) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
                     updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]); //missing metadata so we replace it with fresh set
                 }
                 else {
@@ -534,11 +529,11 @@ async function main() {
                         }
 
                         if (ENABLE_ROUTES && 
-                            (existing.routes || 
-                                (existing.routes?.distance && existing.routes?.time)
+                            (!existing.routes || 
+                                (!existing.routes?.distance && !existing.routes?.time)
                             )
                         ) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
-                        
+
                         // At least 1 day newer, treat as new/updated
                         toNotify.push(uniqueListings[i]);
                         updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]); // Replace with fresher

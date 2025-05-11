@@ -74,8 +74,6 @@ async function getRoutes(origin) {
             time: time
         }
 
-        //console.log(object);
-
         routes.push(object)
 
     }
@@ -124,7 +122,7 @@ async function routeSubroutine(origin, destination) {
         }
         
         const data = await response.json();
-        //console.log("API Response:", JSON.stringify(data, null, 2)); // Debug log
+        console.log("API Called"); // Debug log
         
         if (data?.routes?.length > 0) {
             const route = data.routes[0];
