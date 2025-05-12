@@ -1,5 +1,7 @@
 'use strict';
 
+require('dotenv').config();
+
 const fs = require('fs');
 const { chromium } = require('patchright');
 const cron = require("cron");
@@ -12,6 +14,7 @@ const { RequestBuilder } = require('ts-curl-impersonate');
 const discord = require('./discord.js');
 const maps = require('./maps.js');
 const config = require('../data/config.json');
+const proxylist = require('../data/proxies.json');
 
 const MAX_LISTING_PRICE = config.max_listing_price;
 const ENABLE_ROUTES = config.routes.enable_routes;
@@ -104,35 +107,6 @@ async function sReality(page) {
     }
 
     return arr;
-}
-
-async function sRealityCurl() {
-
-    console.log('Headless browser failed, attempting fallback scrape with curl-impersonate');
-
-    const urlArr = config.sreality_urls;
-
-    let arr = [];
-
-    for (let i = 0; i < urlArr.length; i++) {
-        const result = await new RequestBuilder().url(urlArr[i]).send();
-
-        const statusCode = result.status;
-        if ((statusCode < 200 || statusCode > 299) && statusCode != 400) {
-            throw new Error(`HTTP status code ${statusCode}`);
-        }
-        const textData = result.response;
-        console.log(textData.substring(0, 200));
-        const jsonResult = await parseHtml('sreality', textData);
-        arr = [...arr, ...jsonResult];
-
-        await sleep(2000);
-    }
-
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function iDnes(page) {
@@ -256,9 +230,26 @@ async function closeBrowserWithTimeout(browser, pid) {
     }
 }
 
-async function launchBrowser() {
+async function launchBrowser(proxyUrl = null) {
 
-    const browserServer = await chromium.launchServer({ headless: true });
+    let browserServer;
+    const PROXY_USERNAME = process.env.PROXY_USERNAME
+    const PROXY_PASSWORD = process.env.PROXY_PASSWORD
+
+    if (proxyUrl) {
+
+        if (PROXY_PASSWORD && PROXY_USERNAME) {
+            browserServer = await chromium.launchServer({ headless: true, proxy: {server: proxyUrl, username: PROXY_USERNAME, password: PROXY_PASSWORD} });
+        }
+        else {
+            console.warn('PROXY_USERNAME or PROXY_PASSWORD not set!');
+            return;
+        }
+    }
+    else {
+        browserServer = await chromium.launchServer({ headless: true });
+    }
+
     const pid = browserServer.process().pid;
     console.log('Browser PID:', pid);
 
@@ -411,6 +402,8 @@ async function main() {
 
         main_is_running = true;
 
+        if (ENABLE_ROUTES) await maps.setDepartureTime();
+
         let listingsFileData = await fileData();
 
         if (listingsFileData && listingsFileData.length > 0) {
@@ -424,7 +417,19 @@ async function main() {
             //sreality failed to fetch headful, try ts curl
             if (sreality && sreality.length === 0) {
                 try {
-                    sreality = await sRealityCurl();
+                    const proxyUrl = proxylist[Math.floor(Math.random() * proxylist.length)]; //fetch random ip from file
+
+                    if (proxyUrl) {
+                        //alternate browser to try and fetch the thing on a proxy
+                        console.log('Attempting to fetch Sreality through proxy.');
+                        const [browser, page, pid] = await launchBrowser(proxyUrl.ip);
+                        sreality = await sReality(page);
+                        await closeBrowserWithTimeout(browser, pid);
+                    }
+                    else {
+                        console.warn('No proxies provided');
+                    }
+
                 }
                 catch (error) {
                     console.log('Failed to fetch fallback Sreality! ', error);
@@ -500,6 +505,7 @@ async function main() {
                     updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]); //missing metadata so we replace it with fresh set
                 }
                 else {
+                    //so far no reposted listings, is this a bug or is the sample size too small?
                     uniqueListings[i].status = 'REPOST';
                     // Exists, check timestamp
                     const oldTime = new Date(existing.timestamp).getTime();
