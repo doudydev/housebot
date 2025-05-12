@@ -6,20 +6,20 @@ const config = require('../data/config.json');
 const ENDPOINT = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 const ORIGIN_COUNTRY = 'Czechia';
 
-function getNextMonday() {
+async function getNextMonday() {
     const now = new Date();
     const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    
+
     // Days until next Monday (if today is Monday, we want next Monday)
     const daysToAdd = day === 1 ? 7 : (8 - day) % 7;
-    
+
     // Set to next Monday
     const nextMonday = new Date(now);
     nextMonday.setDate(now.getDate() + daysToAdd);
-    
+
     // Set time to 6:00 AM
     nextMonday.setHours(8, 0, 0, 0);
-    
+
     return nextMonday;
 }
 
@@ -27,18 +27,20 @@ function getNextMonday() {
 let DEPARTURE_TIME;
 
 // Check if the configured date is in the future
-const configDate = new Date(config.routes.simulated_date);
-const now = new Date();
+async function setDepartureTime() {
+    const configDate = new Date(config.routes.simulated_date);
+    const now = new Date();
 
-if (configDate > now) {
-    // If the configured date is still in the future, use it
-    console.log("Using configured future date:", config.routes.simulated_date);
-    DEPARTURE_TIME = config.routes.simulated_date;
-} else {
-    // If the date has passed, get next Monday at 6 AM
-    const nextMonday = getNextMonday();
-    DEPARTURE_TIME = nextMonday.toISOString();
-    console.log("Configured date has passed. Using next Monday at 6 AM:", DEPARTURE_TIME);
+    if (configDate > now) {
+        // If the configured date is still in the future, use it
+        console.log("Using configured future date:", config.routes.simulated_date);
+        DEPARTURE_TIME = config.routes.simulated_date;
+    } else {
+        // If the date has passed, get next Monday at 6 AM
+        const nextMonday = await getNextMonday();
+        DEPARTURE_TIME = nextMonday.toISOString();
+        console.log("Configured date has passed. Using next Monday at 6 AM:", DEPARTURE_TIME);
+    }
 }
 
 async function getRoutes(origin) {
@@ -55,7 +57,7 @@ async function getRoutes(origin) {
     if (!origin.street) origin.street = '';
 
     for (let i = 0; i < destinations.length; i++) {
-        
+
         const [kilometers, time] = await routeSubroutine(origin, destinations[i]);
 
         //console.log(`${kilometers} , ${time}`)
@@ -115,18 +117,18 @@ async function routeSubroutine(origin, destination) {
 
     try {
         const response = await fetch(ENDPOINT, options);
-        
+
         if (!response.ok) {
             console.error(`API error: ${response.status} ${response.statusText}`);
             return [null, null];
         }
-        
+
         const data = await response.json();
         console.log("API Called"); // Debug log
-        
+
         if (data?.routes?.length > 0) {
             const route = data.routes[0];
-            
+
             // Handle different duration formats
             let totalSeconds;
             if (typeof route.duration === 'object' && route.duration.seconds) {
@@ -142,26 +144,26 @@ async function routeSubroutine(origin, destination) {
                 console.error("Unexpected duration format:", route.duration);
                 return [null, null];
             }
-            
+
             const hours = Math.floor(totalSeconds / 3600);
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = totalSeconds % 60;
-            
+
             let time;
             if (hours > 0) {
                 time = `${hours}h ${minutes}m ${seconds}s`;
             } else {
                 time = `${minutes}m ${seconds}s`;
             }
-            
+
             const distanceMeters = Number(route.distanceMeters);
             if (isNaN(distanceMeters)) {
                 console.error("Invalid distance value:", route.distanceMeters);
                 return [null, null];
             }
-            
+
             const kilometers = (distanceMeters / 1000).toFixed(2) + 'km';
-            
+
             return [kilometers, time];
         } else {
             console.error("No routes found in API response:", data);
@@ -175,5 +177,6 @@ async function routeSubroutine(origin, destination) {
 
 
 module.exports = {
+    setDepartureTime,
     getRoutes
 }
