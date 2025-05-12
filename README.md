@@ -11,7 +11,8 @@ Clone the repo
 Install dependencies with npm i     
 For discord populate env with DISCORD_TOKEN and CHANNEL_ID and set up a Webhook for the given CHANNEL_ID
 If you would like routing options, set up a GOOGLE_APIKEY env variable with your Maps API key   
-In config.json provide URLs and Graph API params to call upon desired listings in each site     
+In config.json provide URLs and GraphQL API params to call upon desired listings in each site     
+Sreality can often fail to fetch listings due to IP throttling, if you wish to use proxies, insert your IPs into proxies.json and PROXY_USERNAME & PROXY_PASSWORD into .env     
 Execute npm run start   
 
 ## To-Do
