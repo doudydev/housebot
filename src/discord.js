@@ -55,6 +55,11 @@ async function constructEmbed(listing) {
         site += `IDNES 🔵`;
     }
 
+    if (url.includes('ceskereality')) {
+        siteColor = '#81ecec';
+        site += `CESKEREALITY 🔵`;
+    }
+
     //form query
     let fieldsArr = [];
 

@@ -153,5 +153,9 @@
         "https://reality.idnes.cz/s/prodej/byty/kladno/?s-qc%5BusableAreaMin%5D=70&s-qc%5Bownership%5D%5B0%5D=personal",
         "https://reality.idnes.cz/s/prodej/domy/cena-do-10500000/?s-l=VUSC-19%3BVUSC-27&s-qc%5BsubtypeHouse%5D%5B0%5D=house&s-qc%5BsubtypeHouse%5D%5B1%5D=turn-key&s-qc%5BsubtypeHouse%5D%5B2%5D=other&s-qc%5BusableAreaMin%5D=70&s-qc%5Bownership%5D%5B0%5D=personal",
         "https://reality.idnes.cz/s/prodej/byty/cena-do-10500000/?s-l=VUSC-19%3BVUSC-27&s-qc%5BsubtypeFlat%5D%5B0%5D=4k&s-qc%5BsubtypeFlat%5D%5B1%5D=41&s-qc%5BsubtypeFlat%5D%5B2%5D=5k&s-qc%5BsubtypeFlat%5D%5B3%5D=51&s-qc%5BsubtypeFlat%5D%5B4%5D=6k&s-qc%5BsubtypeFlat%5D%5B5%5D=atypical&s-qc%5BusableAreaMin%5D=70&s-qc%5Bownership%5D%5B0%5D=personal"
+    ],
+    "ceskereality_urls": [
+        "https://stredo.ceskereality.cz/prodej/byty/byty-3-kk/do-12000000/?d_subtyp=207,208,209,210,211,299&vymera_od=70",
+        "https://stredo.ceskereality.cz/prodej/rodinne-domy/rodinne-domy/do-13000000/?d_subtyp=103,104,105,107,199&vymera_od=80"
     ]
 }

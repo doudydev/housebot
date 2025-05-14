@@ -8,19 +8,17 @@ const cron = require("cron");
 const urlMetadata = require('url-metadata');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
-const { RequestBuilder } = require('ts-curl-impersonate');
-
 //LOCAL FILES
 const discord = require('./discord.js');
 const maps = require('./maps.js');
 const config = require('../data/config.json');
-const proxylist = require('../data/proxies.json');
 
 const MAX_LISTING_PRICE = config.max_listing_price;
 const ENABLE_ROUTES = config.routes.enable_routes;
 const IDNES_URLS = config.idnes_urls;
 const SREALITY_URLS = config.sreality_urls;
 const BEZREALITKY_URLS = config.bezrealitky_urls;
+const CESKEREALITY_URLS = config.ceskereality_urls;
 
 const FILE_PATH = './data/listings.json';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -76,64 +74,111 @@ async function bezRealitky() {
 }
 
 async function sReality(page) {
-    console.log('sReality init');
 
-    const urlArr = SREALITY_URLS;
+    try {
+        console.log('sReality init');
 
-    let html;
-    let listings;
-    let arr = [];
-    let firstLaunch = true;
+        const urlArr = SREALITY_URLS;
 
-    for (let i = 0; i < urlArr.length; i++) {
-        await page.goto(urlArr[i]);
+        let html;
+        let listings;
+        let arr = [];
+        let firstLaunch = true;
 
-        if (firstLaunch) {
-            //accept cookies
-            //data-testid=cw-button-agree-with-ads
-            const element = page.locator('[data-testid="cw-button-agree-with-ads"]');
-            await element.click();
-            firstLaunch = false;
+        for (let i = 0; i < urlArr.length; i++) {
+
+            await page.goto(urlArr[i], {waitUntil: "networkidle"});
+
+            if (firstLaunch) {
+                const element = await page.locator('[data-testid="cw-button-agree-with-ads"]');
+                await element.click();
+                firstLaunch = false;
+            }
+
+            await page.waitForTimeout(5000);
+
+            html = await page.content();
+            listings = await parseHtml('sreality', html);
+            if (listings && listings.length > 0) {
+                arr = [...arr, ...listings];
+            }
+
         }
 
-        await page.waitForTimeout(3000);
-
-        html = await page.content();
-        listings = await parseHtml('sreality', html);
-        if (listings && listings.length > 0) {
-            arr = [...arr, ...listings];
-        }
-
+        return arr;
+    }
+    catch (error) {
+        console.log('sReality error:', error);
+        return [];
     }
 
-    return arr;
 }
 
 async function iDnes(page) {
 
-    console.log('Idnes init')
+    try {
+        console.log('Idnes init')
 
-    const urlArr = IDNES_URLS;
+        const urlArr = IDNES_URLS;
 
-    let html;
-    let listings;
-    let arr = [];
+        let html;
+        let listings;
+        let arr = [];
 
-    for (let i = 0; i < urlArr.length; i++) {
-        await page.goto(urlArr[i]);
+        for (let i = 0; i < urlArr.length; i++) {
+            await page.goto(urlArr[i]);
 
-        await page.locator('.paging__item:has-text("2")').scrollIntoViewIfNeeded();
+            await page.waitForTimeout(2500);
 
-        await page.waitForTimeout(5000);
+            await page.locator('.paging__item:has-text("2")').scrollIntoViewIfNeeded();
 
-        html = await page.content();
-        listings = await parseHtml('idnes', html);
-        if (listings && listings.length > 0) {
-            arr = [...arr, ...listings];
+            await page.waitForTimeout(2500);
+
+            html = await page.content();
+            listings = await parseHtml('idnes', html);
+            if (listings && listings.length > 0) {
+                arr = [...arr, ...listings];
+            }
         }
+
+        return arr;
+    }
+    catch (error) {
+        console.log('iDnes failed:', error);
+        return [];
     }
 
-    return arr;
+}
+
+async function ceskeReality(page) {
+
+    try {
+        console.log('ceskeReality init')
+
+        const urlArr = CESKEREALITY_URLS;
+
+        let html;
+        let listings;
+        let arr = [];
+
+        for (let i = 0; i < urlArr.length; i++) {
+            await page.goto(urlArr[i]);
+
+            await page.waitForTimeout(5000);
+
+            html = await page.content();
+            listings = await parseHtml('ceskereality', html);
+            if (listings && listings.length > 0) {
+                arr = [...arr, ...listings];
+            }
+        }
+
+        return arr;
+    }
+    catch (error) {
+        console.log('ceskeReality error:', error)
+        return [];
+    }
 
 }
 
@@ -142,9 +187,14 @@ async function parseHtml(site, html) {
     const dom = new JSDOM(html);
     const document = dom.window.document;
     let links;
+    let ceskereality_prices;
 
     if (site === 'sreality') links = document.querySelector('[data-e2e="estates-list"]')?.querySelectorAll('.MuiTypography-root.MuiTypography-inherit.MuiLink-root.MuiLink-underlineAlways');
     if (site === 'idnes') links = document.querySelectorAll('.c-products__link');
+    if (site === 'ceskereality') {
+        links = document.querySelectorAll('.i-estate__image-link');
+        ceskereality_prices = Array.from(document.querySelectorAll('.i-estate__footer-price-value'));
+    }
 
     if (!links) {
         throw new Error('Links is empty!');
@@ -184,15 +234,15 @@ async function parseHtml(site, html) {
             type = 'POZEMEK';
         }
 
-        if (links[i].href.includes('/byt/')) {
+        if (links[i].href.includes('/byt/') || links[i].href.includes('/byty/')) {
             type = 'BYT';
         }
 
-        if (links[i].href.includes('/dum/')) {
+        if (links[i].href.includes('/dum/') || links[i].href.includes('/rodinne-domy/')) {
             type = 'DUM';
         }
 
-        const match = links[i].href.match(/(?:[a-f0-9]+|\d+)(?=\/?$)/);
+        const match = links[i].href.match(/(?:[a-f0-9]+|\d+)(?=(?:\.html)?\/?$)/);
         const id = match ? match[0] : null;
 
         if (site === 'sreality' && !links[i].href.includes('https://sreality.cz')) {
@@ -203,7 +253,22 @@ async function parseHtml(site, html) {
             links[i].href = 'https://reality.idnes.cz' + links[i].href;
         }
 
-        listings.push({ "id": id, "type": type, "url": links[i].href, timestamp: Date.now() });
+        if (site === 'ceskereality' && !links[i].href.includes('hhttps://stredo.ceskereality.cz')) {
+            links[i].href = 'https://stredo.ceskereality.cz' + links[i].href;
+        }
+
+        let obj = {
+            "id": id,
+            "type": type,
+            "url": links[i].href,
+            timestamp: Date.now(),
+        }
+
+        if (ceskereality_prices) {
+            obj.price = Number(ceskereality_prices[i].textContent.replace(/Kč/g, '').replace(/\s/g, ''));
+        }
+
+        listings.push(obj);
 
     }
 
@@ -230,25 +295,9 @@ async function closeBrowserWithTimeout(browser, pid) {
     }
 }
 
-async function launchBrowser(proxyUrl = null) {
+async function launchBrowser(headless = true) {
 
-    let browserServer;
-    const PROXY_USERNAME = process.env.PROXY_USERNAME
-    const PROXY_PASSWORD = process.env.PROXY_PASSWORD
-
-    if (proxyUrl) {
-
-        if (PROXY_PASSWORD && PROXY_USERNAME) {
-            browserServer = await chromium.launchServer({ headless: true, proxy: {server: proxyUrl, username: PROXY_USERNAME, password: PROXY_PASSWORD} });
-        }
-        else {
-            console.warn('PROXY_USERNAME or PROXY_PASSWORD not set!');
-            return;
-        }
-    }
-    else {
-        browserServer = await chromium.launchServer({ headless: true });
-    }
+    const browserServer = await chromium.launchServer({ headless: headless });
 
     const pid = browserServer.process().pid;
     console.log('Browser PID:', pid);
@@ -391,6 +440,51 @@ async function processMetadata(metadata) {
         };
     }
 
+    if (metadata.url.includes('ceskereality')) {
+        // Extract location from title - format appears to be "Prodej bytu 3+kk, 71 m², Beroun, ulice Nepilova, okres Beroun"
+        const titleParts = metadata.title.split(',').map(part => part.trim());
+
+        let street = '';
+        let town = '';
+
+        // Look for the part that contains "ulice" (street)
+        for (let i = 0; i < titleParts.length; i++) {
+            if (titleParts[i].includes('ulice')) {
+                street = titleParts[i].replace('ulice', '').trim();
+                // Check if the previous part is likely the town
+                if (i > 0 && !titleParts[i - 1].includes('m²')) {
+                    town = titleParts[i - 1];
+                }
+                break;
+            }
+        }
+
+        // If street wasn't found with "ulice", try to find town and street based on position
+        if (!street && titleParts.length > 2) {
+            // Skip property type and size parts, look for location info
+            for (let i = 2; i < titleParts.length; i++) {
+                const part = titleParts[i];
+                if (!part.includes('m²') && !part.includes('okres')) {
+                    if (!town) {
+                        town = part;
+                    } else if (!street && !part.includes('okres')) {
+                        street = part;
+                    }
+                }
+            }
+        }
+
+        // Replace spaces with plus signs
+        street = street.replace(/\s+/g, '+');
+        town = town.replace(/\s+/g, '+');
+
+        //price already extracted in html
+        obj = {
+            street: street,
+            town: town
+        };
+    }
+
     if (obj.street?.includes('m²') || obj.street?.includes('pozemek')) obj.street = undefined;
     if (obj.town?.includes('m²')) obj.street = undefined;
 
@@ -408,8 +502,6 @@ async function main() {
 
         if (listingsFileData && listingsFileData.length > 0) {
 
-            let bezrealitky = await bezRealitky();
-
             const [browser, page, pid] = await launchBrowser();
 
             let sreality = await sReality(page);
@@ -417,32 +509,29 @@ async function main() {
             //sreality failed to fetch headful, try ts curl
             if (sreality && sreality.length === 0) {
                 try {
-                    const proxyUrl = proxylist[Math.floor(Math.random() * proxylist.length)]; //fetch random ip from file
-
-                    if (proxyUrl) {
-                        //alternate browser to try and fetch the thing on a proxy
-                        console.log('Attempting to fetch Sreality through proxy.');
-                        const [browser, page, pid] = await launchBrowser(proxyUrl.ip);
-                        sreality = await sReality(page);
-                        await closeBrowserWithTimeout(browser, pid);
-                    }
-                    else {
-                        console.warn('No proxies provided');
-                    }
-
+                    //alternate browser to try and fetch the thing on a proxy
+                    console.log('Attempting to fetch Sreality through headful.');
+                    const [browser, page, pid] = await launchBrowser(false);
+                    sreality = await sReality(page);
+                    await closeBrowserWithTimeout(browser, pid);
                 }
                 catch (error) {
                     console.log('Failed to fetch fallback Sreality! ', error);
                 }
             }
 
+            let bezrealitky = await bezRealitky();
+
             let idnes = await iDnes(page);
+
+            let ceskereality = await ceskeReality(page);
 
             console.log('BZ ', bezrealitky.length);
             console.log('SR ', sreality.length);
             console.log('ID ', idnes.length);
+            console.log('CR ', ceskereality.length);
 
-            const mergedListings = [...bezrealitky, ...sreality, ...idnes];
+            const mergedListings = [...bezrealitky, ...sreality, ...idnes, ...ceskereality];
             let uniqueListings = mergedListings.filter((listing, index, array) => {
                 return array.findIndex(item => item.id === listing.id) === index;
             });
@@ -453,7 +542,7 @@ async function main() {
                     url: result['og:url'],
                     title: result['og:title'],
                     site_name: result['og:site_name'],
-                    description: result['og:description'],
+                    description: (uniqueListings[i].url.includes('ceskereality')) ? result.jsonld[0]?.description.substring(0, 264) : result['og:description'],
                     image: result['og:image']
                 }
 
@@ -517,25 +606,25 @@ async function main() {
 
                         if (uniqueListings[i].price < oldPrice) {
                             uniqueListings[i].status = 'PRICE';
-                            
+
                             if (!uniqueListings[i].price_history) {
                                 uniqueListings[i].price_history = [];
                             }
-        
+
                             //check if latest added price is the same, then just shift it, then insert lower/higher price in
                             if (uniqueListings[i].price_history.length > 0) {
                                 if (uniqueListings[i].price === uniqueListings[i].price_history[0].price) {
                                     uniqueListings[i].price_history.shift();
                                 }
                             }
-        
+
                             //element is inserted into beginning of array
-                            uniqueListings[i].price_history.unshift({price: processedObj.price, timestamp: Date.now()});
-                        
+                            uniqueListings[i].price_history.unshift({ price: processedObj.price, timestamp: Date.now() });
+
                         }
 
-                        if (ENABLE_ROUTES && 
-                            (!existing.routes || 
+                        if (ENABLE_ROUTES &&
+                            (!existing.routes ||
                                 (!existing.routes?.distance && !existing.routes?.time)
                             )
                         ) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
