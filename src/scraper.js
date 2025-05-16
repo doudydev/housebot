@@ -585,7 +585,19 @@ async function main() {
                 if (!existing) {
                     // Not in DB, it's new
                     uniqueListings[i].status = 'NEW';
-                    if (ENABLE_ROUTES) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
+
+                    if (ENABLE_ROUTES) {
+                        const routes = await maps.checkExistingRoutes(uniqueListings[i], listingsFileData);
+
+                        if (routes) {
+                            console.log('Route already in DB.');
+                            uniqueListings[i].routes = routes;
+                        }
+                        else {
+                            uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
+                        }
+            
+                    }
                     toNotify.push(uniqueListings[i]);
                     //get routing to airport + hometown
                     updatedDataMap.set(uniqueListings[i].id, uniqueListings[i]);
@@ -627,7 +639,17 @@ async function main() {
                             (!existing.routes ||
                                 (!existing.routes?.distance && !existing.routes?.time)
                             )
-                        ) uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
+                        ) {
+                            const routes = await maps.checkExistingRoutes(uniqueListings[i], listingsFileData);
+
+                            if (routes) {
+                                console.log('Route already in DB.');
+                                uniqueListings[i].routes = routes;
+                            }
+                            else {
+                                uniqueListings[i].routes = await maps.getRoutes(uniqueListings[i]);
+                            }
+                        }
 
                         // At least 1 day newer, treat as new/updated
                         toNotify.push(uniqueListings[i]);

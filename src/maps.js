@@ -43,6 +43,29 @@ async function setDepartureTime() {
     }
 }
 
+//checks if google has calculated a route already to cut down on api calls
+async function checkExistingRoutes(listing, listingsArray) {
+
+    const matchingProperties = listingsArray.filter(property => {
+        // Check if property has street and town properties matching query
+        const streetMatch = property.street === listing.street;
+        const townMatch = property.town === listing.town;
+
+        // Check if routes property exists and is an array
+        const hasRoutes = property.routes && Array.isArray(property.routes) && property.routes.length > 0;
+
+        // Return true only if all conditions are met
+        return streetMatch && townMatch && hasRoutes;
+    });
+
+    if (matchingProperties.length > 0) {
+        return matchingProperties[0].routes;
+    }
+
+    // Return null if no matches found
+    return null;
+}
+
 async function getRoutes(origin) {
 
     if (!process.env.GOOGLE_APIKEY) {
@@ -178,5 +201,6 @@ async function routeSubroutine(origin, destination) {
 
 module.exports = {
     setDepartureTime,
-    getRoutes
+    getRoutes,
+    checkExistingRoutes
 }
