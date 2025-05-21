@@ -297,14 +297,25 @@ async function closeBrowserWithTimeout(browser, pid) {
 
 async function launchBrowser(headless = true) {
 
-    const browserServer = await chromium.launchServer({ headless: headless });
+    let argsArr = [
+        "--display=:0.1"  // specify the display to use for the new window
+    ]
+
+    const browserServer = await chromium.launchServer({ headless: headless, args: argsArr });
 
     const pid = browserServer.process().pid;
     console.log('Browser PID:', pid);
 
     const browser = await chromium.connect(browserServer.wsEndpoint());
     const page = await browser.newPage();
-    await page.setViewportSize({ width: 1920, height: 1080 });
+
+    if (!headless) {
+        await page.setViewportSize({ width: 1920, height: 1080 });
+    }
+    else {
+        await page.setViewportSize({ width: 480, height: 320 });
+    }
+
 
     return [browser, page, pid];
 }
@@ -512,6 +523,10 @@ async function main() {
                     //alternate browser to try and fetch the thing on a proxy
                     console.log('Attempting to fetch Sreality through headful.');
                     const [browser, page, pid] = await launchBrowser(false);
+                    const cdpSession = await page.context().newCDPSession(page);
+                    const window_info = await cdpSession.send('Browser.getWindowForTarget', {})
+                    const window_id = window_info['windowId']
+                    cdpSession.send('Browser.setWindowBounds', {'windowId': window_id, 'bounds': {'windowState': 'minimized'}})
                     sreality = await sReality(page);
                     await closeBrowserWithTimeout(browser, pid);
                 }
