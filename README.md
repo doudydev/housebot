@@ -4,7 +4,8 @@ Personal project that aggregates Czech property sites and reports on new/modifie
 
 ### UPDATE
 ```
-As of 06/2025 this project has been sunsetted as its purpose has been fulfilled. This repo will no longer be maintained.
+As of 06/2025 this project has been sunsetted as its purpose has been fulfilled. 
+This repo will no longer be maintained.
 ```
 
 ## Dependencies
