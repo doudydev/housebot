@@ -2,6 +2,11 @@
 
 Personal project that aggregates Czech property sites and reports on new/modified listings of properties and propagates these changes to a discord channel.
 
+### UPDATE
+```
+As of 06/2025 this project has been sunsetted as its purpose has been fulfilled. This repo will no longer be maintained.
+```
+
 ## Dependencies
 Node v20+   
 CLI     
